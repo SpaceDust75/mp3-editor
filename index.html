@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MP3 편집기</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #1a1a2e;
+      color: #eee;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 40px 20px;
+    }
+    h1 { font-size: 1.8rem; margin-bottom: 32px; letter-spacing: -0.5px; }
+
+    #upload-area {
+      width: 100%;
+      max-width: 700px;
+      border: 2px dashed #444;
+      border-radius: 12px;
+      padding: 40px;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color 0.2s, background 0.2s;
+      margin-bottom: 24px;
+    }
+    #upload-area:hover, #upload-area.drag-over {
+      border-color: #7c6af7;
+      background: rgba(124,106,247,0.08);
+    }
+    #upload-area p { color: #888; margin-top: 8px; font-size: 0.9rem; }
+    #file-input { display: none; }
+
+    #editor { width: 100%; max-width: 700px; display: none; }
+
+    #waveform { width: 100%; background: #16213e; border-radius: 8px; overflow: hidden; margin-bottom: 12px; }
+
+    #region-info {
+      display: flex;
+      gap: 24px;
+      margin-bottom: 16px;
+      font-size: 0.95rem;
+      color: #aaa;
+    }
+    #region-info span { color: #7c6af7; font-weight: 600; }
+
+    #controls { display: flex; gap: 12px; margin-bottom: 20px; }
+    #actions { display: flex; gap: 12px; flex-wrap: wrap; }
+
+    button {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 0.9rem;
+      font-weight: 600;
+      transition: opacity 0.2s, transform 0.1s;
+    }
+    button:disabled { opacity: 0.4; cursor: not-allowed; }
+    button:not(:disabled):hover { opacity: 0.9; }
+    button:not(:disabled):active { transform: scale(0.98); }
+
+    .btn-secondary { background: #2d2d4e; color: #eee; }
+    .btn-extract { background: #22c55e; color: #fff; }
+    .btn-delete { background: #ef4444; color: #fff; }
+
+    #error-msg {
+      color: #ef4444;
+      font-size: 0.85rem;
+      margin-top: 8px;
+      min-height: 20px;
+    }
+
+    .spinner {
+      display: inline-block;
+      width: 14px;
+      height: 14px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.6s linear infinite;
+      vertical-align: middle;
+      margin-right: 6px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+  <h1>🎵 MP3 편집기</h1>
+
+  <div id="upload-area">
+    <input type="file" id="file-input" accept=".mp3,audio/mpeg">
+    <div style="font-size: 2rem; margin-bottom: 8px;">📂</div>
+    <strong>MP3 파일을 여기에 끌어다 놓거나 클릭하여 선택</strong>
+    <p>MP3 파일만 지원합니다</p>
+    <div id="error-msg"></div>
+  </div>
+
+  <div id="editor">
+    <div id="waveform"></div>
+    <div id="region-info">
+      <div>시작: <span id="start-time">-</span></div>
+      <div>끝: <span id="end-time">-</span></div>
+    </div>
+    <div id="controls">
+      <button class="btn-secondary" id="btn-play">▶ 재생</button>
+      <button class="btn-secondary" id="btn-play-region" disabled>구간만 미리듣기</button>
+    </div>
+    <div id="actions">
+      <button class="btn-extract" id="btn-extract" disabled>구간 추출 다운로드</button>
+      <button class="btn-delete" id="btn-delete" disabled>구간 삭제 후 다운로드</button>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/wavesurfer.js@6.6.4/dist/wavesurfer.min.js"></script>
+  <script src="https://unpkg.com/wavesurfer.js@6.6.4/dist/plugin/wavesurfer.regions.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/lamejs@1.2.1/lame.min.js"></script>
+
+  <script>
+    let wavesurfer = null;
+    let audioBuffer = null;
+    let currentRegion = null;
+    let currentFileName = 'edited';
+    let audioCtx = null;
+
+    const uploadArea    = document.getElementById('upload-area');
+    const fileInput     = document.getElementById('file-input');
+    const editor        = document.getElementById('editor');
+    const errorMsg      = document.getElementById('error-msg');
+    const startTimeEl   = document.getElementById('start-time');
+    const endTimeEl     = document.getElementById('end-time');
+    const btnPlay       = document.getElementById('btn-play');
+    const btnPlayRegion = document.getElementById('btn-play-region');
+    const btnExtract    = document.getElementById('btn-extract');
+    const btnDelete     = document.getElementById('btn-delete');
+
+    function formatTime(seconds) {
+      const m = Math.floor(seconds / 60).toString().padStart(2, '0');
+      const s = (seconds % 60).toFixed(1).padStart(4, '0');
+      return `${m}:${s}`;
+    }
+
+    function showError(msg) { errorMsg.textContent = msg; }
+    function clearError()   { errorMsg.textContent = ''; }
+
+    function setButtonsEnabled(enabled) {
+      btnPlayRegion.disabled = !enabled;
+      btnExtract.disabled    = !enabled;
+      btnDelete.disabled     = !enabled;
+    }
+
+    function setLoading(btn, isLoading, originalText) {
+      if (isLoading) {
+        btn.innerHTML = '<span class="spinner"></span>처리 중...';
+        btn.disabled  = true;
+      } else {
+        btn.innerHTML = originalText;
+        btn.disabled  = false;
+      }
+    }
+
+    function floatTo16BitPCM(float32Array) {
+      const int16 = new Int16Array(float32Array.length);
+      for (let i = 0; i < float32Array.length; i++) {
+        const s = Math.max(-1, Math.min(1, float32Array[i]));
+        int16[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+      }
+      return int16;
+    }
+
+    function audioBufferToMp3(buffer) {
+      const channels   = buffer.numberOfChannels;
+      const sampleRate = buffer.sampleRate;
+      const encoder    = new lamejs.Mp3Encoder(channels === 1 ? 1 : 2, sampleRate, 128);
+      const blockSize  = 1152;
+      const mp3chunks  = [];
+
+      if (channels === 1) {
+        const samples = floatTo16BitPCM(buffer.getChannelData(0));
+        for (let i = 0; i < samples.length; i += blockSize) {
+          const chunk   = samples.subarray(i, i + blockSize);
+          const encoded = encoder.encodeBuffer(chunk);
+          if (encoded.length > 0) mp3chunks.push(encoded);
+        }
+      } else {
+        const left  = floatTo16BitPCM(buffer.getChannelData(0));
+        const right = floatTo16BitPCM(buffer.getChannelData(1));
+        for (let i = 0; i < left.length; i += blockSize) {
+          const lChunk  = left.subarray(i, i + blockSize);
+          const rChunk  = right.subarray(i, i + blockSize);
+          const encoded = encoder.encodeBuffer(lChunk, rChunk);
+          if (encoded.length > 0) mp3chunks.push(encoded);
+        }
+      }
+
+      const flushed = encoder.flush();
+      if (flushed.length > 0) mp3chunks.push(flushed);
+      return new Blob(mp3chunks, { type: 'audio/mpeg' });
+    }
+
+    function sliceBuffer(buffer, startSec, endSec) {
+      const sr    = buffer.sampleRate;
+      const start = Math.floor(startSec * sr);
+      const end   = Math.floor(endSec   * sr);
+      const len   = end - start;
+      const out   = audioCtx.createBuffer(buffer.numberOfChannels, len, sr);
+      for (let ch = 0; ch < buffer.numberOfChannels; ch++) {
+        out.copyToChannel(buffer.getChannelData(ch).subarray(start, end), ch);
+      }
+      return out;
+    }
+
+    function deleteSegment(buffer, startSec, endSec) {
+      const sr       = buffer.sampleRate;
+      const startIdx = Math.floor(startSec * sr);
+      const endIdx   = Math.floor(endSec   * sr);
+      const newLen   = buffer.length - (endIdx - startIdx);
+      const out      = audioCtx.createBuffer(buffer.numberOfChannels, newLen, sr);
+      for (let ch = 0; ch < buffer.numberOfChannels; ch++) {
+        const src  = buffer.getChannelData(ch);
+        const dest = new Float32Array(newLen);
+        dest.set(src.subarray(0, startIdx), 0);
+        dest.set(src.subarray(endIdx),      startIdx);
+        out.copyToChannel(dest, ch);
+      }
+      return out;
+    }
+
+    function downloadBlob(blob, filename) {
+      const url = URL.createObjectURL(blob);
+      const a   = document.createElement('a');
+      a.href     = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    }
+
+    function loadFile(file) {
+      if (!file.type.includes('mpeg') && !file.name.toLowerCase().endsWith('.mp3')) {
+        showError('MP3 파일만 지원합니다.');
+        return;
+      }
+      clearError();
+      currentFileName = file.name.replace(/\.mp3$/i, '');
+
+      if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      }
+
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        try {
+          const arrayBuffer = e.target.result;
+          const copyForDecode = arrayBuffer.slice(0);
+          audioBuffer = await audioCtx.decodeAudioData(copyForDecode);
+        } catch {
+          showError('파일을 읽을 수 없습니다.');
+          return;
+        }
+
+        if (wavesurfer) { wavesurfer.destroy(); wavesurfer = null; }
+        currentRegion = null;
+        setButtonsEnabled(false);
+        startTimeEl.textContent = '-';
+        endTimeEl.textContent   = '-';
+
+        wavesurfer = WaveSurfer.create({
+          container: '#waveform',
+          waveColor: '#4F86C6',
+          progressColor: '#2D5FA6',
+          height: 100,
+          plugins: [
+            WaveSurfer.regions.create({
+              dragSelection: { slop: 5 },
+              regions: []
+            })
+          ]
+        });
+
+        wavesurfer.on('play',   () => { btnPlay.textContent = '⏸ 일시정지'; });
+        wavesurfer.on('pause',  () => { btnPlay.textContent = '▶ 재생'; });
+        wavesurfer.on('finish', () => { btnPlay.textContent = '▶ 재생'; });
+
+        wavesurfer.on('region-created', handleRegion);
+        wavesurfer.on('region-updated', handleRegion);
+
+        const blob    = new Blob([arrayBuffer], { type: 'audio/mpeg' });
+        const blobUrl = URL.createObjectURL(blob);
+        wavesurfer.load(blobUrl);
+        wavesurfer.on('ready', () => URL.revokeObjectURL(blobUrl));
+        wavesurfer.on('error', () => URL.revokeObjectURL(blobUrl));
+
+        editor.style.display     = 'block';
+        uploadArea.style.display = 'none';
+      };
+      reader.readAsArrayBuffer(file);
+    }
+
+    function handleRegion(region) {
+      const regions = wavesurfer.regions.list;
+      Object.values(regions).forEach(r => {
+        if (r.id !== region.id) r.remove();
+      });
+      currentRegion = region;
+      startTimeEl.textContent = formatTime(region.start);
+      endTimeEl.textContent   = formatTime(region.end);
+      setButtonsEnabled(true);
+    }
+
+    uploadArea.addEventListener('click', () => fileInput.click());
+
+    fileInput.addEventListener('change', (e) => {
+      if (e.target.files[0]) loadFile(e.target.files[0]);
+    });
+
+    uploadArea.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      uploadArea.classList.add('drag-over');
+    });
+    uploadArea.addEventListener('dragleave', () => uploadArea.classList.remove('drag-over'));
+    uploadArea.addEventListener('drop', (e) => {
+      e.preventDefault();
+      uploadArea.classList.remove('drag-over');
+      if (e.dataTransfer.files[0]) loadFile(e.dataTransfer.files[0]);
+    });
+
+    btnPlay.addEventListener('click', () => {
+      if (wavesurfer) wavesurfer.playPause();
+    });
+
+    btnPlayRegion.addEventListener('click', () => {
+      if (wavesurfer && currentRegion) currentRegion.play();
+    });
+
+    btnExtract.addEventListener('click', () => {
+      if (!audioBuffer || !currentRegion) return;
+      setLoading(btnExtract, true);
+      setTimeout(() => {
+        try {
+          const sliced = sliceBuffer(audioBuffer, currentRegion.start, currentRegion.end);
+          const mp3    = audioBufferToMp3(sliced);
+          downloadBlob(mp3, currentFileName + '_추출.mp3');
+        } catch (err) {
+          showError('처리 중 오류가 발생했습니다: ' + err.message);
+        } finally {
+          btnExtract.innerHTML = '구간 추출 다운로드';
+          setButtonsEnabled(currentRegion !== null);
+        }
+      }, 50);
+    });
+
+    btnDelete.addEventListener('click', () => {
+      if (!audioBuffer || !currentRegion) return;
+      setLoading(btnDelete, true);
+      setTimeout(() => {
+        try {
+          const edited = deleteSegment(audioBuffer, currentRegion.start, currentRegion.end);
+          const mp3    = audioBufferToMp3(edited);
+          downloadBlob(mp3, currentFileName + '_편집.mp3');
+        } catch (err) {
+          showError('처리 중 오류가 발생했습니다: ' + err.message);
+        } finally {
+          btnDelete.innerHTML = '구간 삭제 후 다운로드';
+          setButtonsEnabled(currentRegion !== null);
+        }
+      }, 50);
+    });
+  </script>
+</body>
+</html>
