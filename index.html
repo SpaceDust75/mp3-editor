@@ -68,6 +68,7 @@
     .btn-secondary { background: #2d2d4e; color: #eee; }
     .btn-extract { background: #22c55e; color: #fff; }
     .btn-delete { background: #ef4444; color: #fff; }
+    .btn-download { background: #7c6af7; color: #fff; }
 
     #error-msg {
       color: #ef4444;
@@ -112,8 +113,9 @@
       <button class="btn-secondary" id="btn-play-region" disabled>구간만 미리듣기</button>
     </div>
     <div id="actions">
-      <button class="btn-extract" id="btn-extract" disabled>구간 추출 다운로드</button>
-      <button class="btn-delete" id="btn-delete" disabled>구간 삭제 후 다운로드</button>
+      <button class="btn-extract" id="btn-extract" disabled>구간 추출</button>
+      <button class="btn-delete" id="btn-delete" disabled>구간 삭제</button>
+      <button class="btn-download" id="btn-download" disabled>다운로드</button>
     </div>
   </div>
 
@@ -124,6 +126,8 @@
   <script>
     let wavesurfer = null;
     let audioBuffer = null;
+    let editedBuffer = null;
+    let editedSuffix = '';
     let currentRegion = null;
     let currentFileName = 'edited';
     let audioCtx = null;
@@ -138,6 +142,7 @@
     const btnPlayRegion = document.getElementById('btn-play-region');
     const btnExtract    = document.getElementById('btn-extract');
     const btnDelete     = document.getElementById('btn-delete');
+    const btnDownload   = document.getElementById('btn-download');
 
     function formatTime(seconds) {
       const m = Math.floor(seconds / 60).toString().padStart(2, '0');
@@ -152,6 +157,10 @@
       btnPlayRegion.disabled = !enabled;
       btnExtract.disabled    = !enabled;
       btnDelete.disabled     = !enabled;
+      if (!enabled) {
+        editedBuffer = null;
+        btnDownload.disabled = true;
+      }
     }
 
     function setLoading(btn, isLoading, originalText) {
@@ -348,14 +357,15 @@
       setLoading(btnExtract, true);
       setTimeout(() => {
         try {
-          const sliced = sliceBuffer(audioBuffer, currentRegion.start, currentRegion.end);
-          const mp3    = audioBufferToMp3(sliced);
-          downloadBlob(mp3, currentFileName + '_추출.mp3');
+          editedBuffer = sliceBuffer(audioBuffer, currentRegion.start, currentRegion.end);
+          editedSuffix = '_추출';
+          btnDownload.disabled = false;
         } catch (err) {
           showError('처리 중 오류가 발생했습니다: ' + err.message);
         } finally {
-          btnExtract.innerHTML = '구간 추출 다운로드';
-          setButtonsEnabled(currentRegion !== null);
+          btnExtract.innerHTML = '구간 추출';
+          btnExtract.disabled  = currentRegion === null;
+          btnDelete.disabled   = currentRegion === null;
         }
       }, 50);
     });
@@ -365,14 +375,31 @@
       setLoading(btnDelete, true);
       setTimeout(() => {
         try {
-          const edited = deleteSegment(audioBuffer, currentRegion.start, currentRegion.end);
-          const mp3    = audioBufferToMp3(edited);
-          downloadBlob(mp3, currentFileName + '_편집.mp3');
+          editedBuffer = deleteSegment(audioBuffer, currentRegion.start, currentRegion.end);
+          editedSuffix = '_편집';
+          btnDownload.disabled = false;
         } catch (err) {
           showError('처리 중 오류가 발생했습니다: ' + err.message);
         } finally {
-          btnDelete.innerHTML = '구간 삭제 후 다운로드';
-          setButtonsEnabled(currentRegion !== null);
+          btnDelete.innerHTML = '구간 삭제';
+          btnExtract.disabled = currentRegion === null;
+          btnDelete.disabled  = currentRegion === null;
+        }
+      }, 50);
+    });
+
+    btnDownload.addEventListener('click', () => {
+      if (!editedBuffer) return;
+      setLoading(btnDownload, true);
+      setTimeout(() => {
+        try {
+          const mp3 = audioBufferToMp3(editedBuffer);
+          downloadBlob(mp3, currentFileName + editedSuffix + '.mp3');
+        } catch (err) {
+          showError('다운로드 중 오류가 발생했습니다: ' + err.message);
+        } finally {
+          btnDownload.innerHTML = '다운로드';
+          btnDownload.disabled  = editedBuffer === null;
         }
       }, 50);
     });
