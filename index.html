@@ -259,46 +259,50 @@
         try {
           const arrayBuffer = e.target.result;
           const copyForDecode = arrayBuffer.slice(0);
+
+          await audioCtx.resume();
           audioBuffer = await audioCtx.decodeAudioData(copyForDecode);
-        } catch {
-          showError('파일을 읽을 수 없습니다.');
-          return;
+
+          if (wavesurfer) { wavesurfer.destroy(); wavesurfer = null; }
+          currentRegion = null;
+          setButtonsEnabled(false);
+          startTimeEl.textContent = '-';
+          endTimeEl.textContent   = '-';
+
+          editor.style.display     = 'block';
+          uploadArea.style.display = 'none';
+
+          wavesurfer = WaveSurfer.create({
+            container: '#waveform',
+            waveColor: '#4F86C6',
+            progressColor: '#2D5FA6',
+            height: 100,
+            plugins: [
+              WaveSurfer.regions.create({
+                dragSelection: { slop: 5 },
+                regions: []
+              })
+            ]
+          });
+
+          wavesurfer.on('play',   () => { btnPlay.textContent = '⏸ 일시정지'; });
+          wavesurfer.on('pause',  () => { btnPlay.textContent = '▶ 재생'; });
+          wavesurfer.on('finish', () => { btnPlay.textContent = '▶ 재생'; });
+
+          wavesurfer.on('region-created', handleRegion);
+          wavesurfer.on('region-updated', handleRegion);
+
+          const blob    = new Blob([arrayBuffer], { type: 'audio/mpeg' });
+          const blobUrl = URL.createObjectURL(blob);
+          wavesurfer.load(blobUrl);
+          wavesurfer.on('ready', () => URL.revokeObjectURL(blobUrl));
+          wavesurfer.on('error', () => URL.revokeObjectURL(blobUrl));
+
+        } catch (err) {
+          showError('파일을 읽을 수 없습니다: ' + err.message);
+          editor.style.display     = 'none';
+          uploadArea.style.display = 'block';
         }
-
-        if (wavesurfer) { wavesurfer.destroy(); wavesurfer = null; }
-        currentRegion = null;
-        setButtonsEnabled(false);
-        startTimeEl.textContent = '-';
-        endTimeEl.textContent   = '-';
-
-        wavesurfer = WaveSurfer.create({
-          container: '#waveform',
-          waveColor: '#4F86C6',
-          progressColor: '#2D5FA6',
-          height: 100,
-          plugins: [
-            WaveSurfer.regions.create({
-              dragSelection: { slop: 5 },
-              regions: []
-            })
-          ]
-        });
-
-        wavesurfer.on('play',   () => { btnPlay.textContent = '⏸ 일시정지'; });
-        wavesurfer.on('pause',  () => { btnPlay.textContent = '▶ 재생'; });
-        wavesurfer.on('finish', () => { btnPlay.textContent = '▶ 재생'; });
-
-        wavesurfer.on('region-created', handleRegion);
-        wavesurfer.on('region-updated', handleRegion);
-
-        const blob    = new Blob([arrayBuffer], { type: 'audio/mpeg' });
-        const blobUrl = URL.createObjectURL(blob);
-        wavesurfer.load(blobUrl);
-        wavesurfer.on('ready', () => URL.revokeObjectURL(blobUrl));
-        wavesurfer.on('error', () => URL.revokeObjectURL(blobUrl));
-
-        editor.style.display     = 'block';
-        uploadArea.style.display = 'none';
       };
       reader.readAsArrayBuffer(file);
     }
