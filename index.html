@@ -49,6 +49,32 @@
     }
     #region-info span { color: #7c6af7; font-weight: 600; }
 
+    #time-input-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+    }
+    #time-input-row label { font-size: 0.85rem; color: #aaa; white-space: nowrap; }
+    #time-input-row input[type="number"] {
+      width: 90px;
+      padding: 7px 10px;
+      background: #2d2d4e;
+      border: 1px solid #444;
+      border-radius: 8px;
+      color: #eee;
+      font-size: 0.9rem;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    #time-input-row input[type="number"]:focus { border-color: #7c6af7; }
+    #time-input-row input[type="number"]::placeholder { color: #666; }
+    #time-input-row .sep { color: #555; }
+    .btn-apply { background: #7c6af7; color: #fff; }
+    .btn-undo    { background: #f59e0b; color: #fff; }
+    .btn-recover { background: #10b981; color: #fff; }
+
     #controls { display: flex; gap: 12px; margin-bottom: 20px; }
     #actions { display: flex; gap: 12px; flex-wrap: wrap; }
 
@@ -89,6 +115,30 @@
       margin-right: 6px;
     }
     @keyframes spin { to { transform: rotate(360deg); } }
+
+    .deleted-region {
+      background: repeating-linear-gradient(
+        45deg,
+        rgba(239, 68, 68, 0.15),
+        rgba(239, 68, 68, 0.15) 6px,
+        rgba(239, 68, 68, 0.35) 6px,
+        rgba(239, 68, 68, 0.35) 12px
+      ) !important;
+    }
+    .deleted-region-label {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: #fff;
+      background: rgba(239, 68, 68, 0.85);
+      padding: 2px 8px;
+      border-radius: 4px;
+      pointer-events: none;
+      white-space: nowrap;
+    }
   </style>
 </head>
 <body>
@@ -104,6 +154,14 @@
 
   <div id="editor">
     <div id="waveform"></div>
+    <div id="time-input-row">
+      <label>시작(초)</label>
+      <input type="number" id="input-start" min="0" step="0.1" placeholder="0.0">
+      <span class="sep">~</span>
+      <label>끝(초)</label>
+      <input type="number" id="input-end" min="0" step="0.1" placeholder="0.0">
+      <button class="btn-apply" id="btn-apply-range">구간 적용</button>
+    </div>
     <div id="region-info">
       <div>시작: <span id="start-time">-</span></div>
       <div>끝: <span id="end-time">-</span></div>
@@ -115,8 +173,11 @@
     <div id="actions">
       <button class="btn-extract" id="btn-extract" disabled>구간 추출</button>
       <button class="btn-delete" id="btn-delete" disabled>구간 삭제</button>
+      <button class="btn-undo" id="btn-undo" disabled>↩ 되돌리기</button>
+      <button class="btn-recover" id="btn-recover" disabled>구간 복구</button>
       <button class="btn-download" id="btn-download" disabled>다운로드</button>
     </div>
+    <div id="editor-error-msg"></div>
   </div>
 
   <script src="https://unpkg.com/wavesurfer.js@6.6.4/dist/wavesurfer.min.js"></script>
@@ -131,6 +192,9 @@
     let currentRegion = null;
     let currentFileName = 'edited';
     let audioCtx = null;
+    let deletedRegions = [];      // 현재 표시된 삭제 구간 [{ start, end, id }]
+    let undoStack = [];           // undo 스택 [{ added, removed[] }]
+    let isAddingDeletedRegion = false; // region-created 이벤트 무시 플래그
 
     const uploadArea    = document.getElementById('upload-area');
     const fileInput     = document.getElementById('file-input');
@@ -142,7 +206,12 @@
     const btnPlayRegion = document.getElementById('btn-play-region');
     const btnExtract    = document.getElementById('btn-extract');
     const btnDelete     = document.getElementById('btn-delete');
+    const btnUndo       = document.getElementById('btn-undo');
+    const btnRecover    = document.getElementById('btn-recover');
     const btnDownload   = document.getElementById('btn-download');
+    const btnApplyRange = document.getElementById('btn-apply-range');
+    const inputStart    = document.getElementById('input-start');
+    const inputEnd      = document.getElementById('input-end');
 
     function formatTime(seconds) {
       const m = Math.floor(seconds / 60).toString().padStart(2, '0');
@@ -157,10 +226,7 @@
       btnPlayRegion.disabled = !enabled;
       btnExtract.disabled    = !enabled;
       btnDelete.disabled     = !enabled;
-      if (!enabled) {
-        editedBuffer = null;
-        btnDownload.disabled = true;
-      }
+      btnRecover.disabled    = !enabled;
     }
 
     function setLoading(btn, isLoading, originalText) {
@@ -171,6 +237,78 @@
         btn.innerHTML = originalText;
         btn.disabled  = false;
       }
+    }
+
+    function applyAllDeletions(buffer, segments) {
+      const sorted = [...segments].sort((a, b) => a.start - b.start);
+      const sr = buffer.sampleRate;
+      const parts = [];
+      let pos = 0;
+      for (const seg of sorted) {
+        const s = Math.floor(seg.start * sr);
+        const e = Math.floor(seg.end   * sr);
+        if (s > pos) parts.push({ from: pos, to: s });
+        pos = Math.max(pos, e);
+      }
+      if (pos < buffer.length) parts.push({ from: pos, to: buffer.length });
+
+      const totalLen = parts.reduce((sum, p) => sum + (p.to - p.from), 0);
+      const out = audioCtx.createBuffer(buffer.numberOfChannels, totalLen, sr);
+      let offset = 0;
+      for (const part of parts) {
+        for (let ch = 0; ch < buffer.numberOfChannels; ch++) {
+          out.copyToChannel(buffer.getChannelData(ch).subarray(part.from, part.to), ch, offset);
+        }
+        offset += part.to - part.from;
+      }
+      return out;
+    }
+
+    function applyRecovery(rs, re) {
+      const affected = deletedRegions.filter(d => d.start < re && d.end > rs);
+      if (affected.length === 0) return false;
+
+      const affectedIds = new Set(affected.map(d => d.id));
+      for (const d of affected) {
+        const r = wavesurfer.regions.list[d.id];
+        if (r) r.remove();
+      }
+      deletedRegions = deletedRegions.filter(d => !affectedIds.has(d.id));
+
+      const newRegions = [];
+      for (const d of affected) {
+        if (d.start < rs) {
+          const r = addDeletedRegionOverlay(d.start, rs);
+          const entry = { start: d.start, end: rs, id: r.id };
+          newRegions.push(entry);
+          deletedRegions.push(entry);
+        }
+        if (d.end > re) {
+          const r = addDeletedRegionOverlay(re, d.end);
+          const entry = { start: re, end: d.end, id: r.id };
+          newRegions.push(entry);
+          deletedRegions.push(entry);
+        }
+      }
+
+      undoStack.push({ added: newRegions, removed: affected });
+      return true;
+    }
+
+    function markDeletedRegion(region) {
+      region.element.classList.add('deleted-region');
+      const label = document.createElement('div');
+      label.className = 'deleted-region-label';
+      label.textContent = '삭제됨';
+      region.element.appendChild(label);
+    }
+
+    function addDeletedRegionOverlay(start, end) {
+      isAddingDeletedRegion = true;
+      const r = wavesurfer.addRegion({ start, end, drag: false, resize: false, color: 'rgba(239, 68, 68, 0.25)' });
+      markDeletedRegion(r);
+      isAddingDeletedRegion = false;
+      return r;
     }
 
     function floatTo16BitPCM(float32Array) {
@@ -257,6 +395,11 @@
         return;
       }
       clearError();
+      deletedRegions = [];
+      undoStack      = [];
+      editedBuffer   = null;
+      btnUndo.disabled     = true;
+      btnDownload.disabled = true;
       currentFileName = file.name.replace(/\.mp3$/i, '');
 
       if (!audioCtx) {
@@ -316,14 +459,23 @@
       reader.readAsArrayBuffer(file);
     }
 
+    // 구간 선택 시 입력 필드 동기화
+    function syncInputsFromRegion(region) {
+      inputStart.value = region.start.toFixed(1);
+      inputEnd.value   = region.end.toFixed(1);
+    }
+
     function handleRegion(region) {
-      const regions = wavesurfer.regions.list;
-      Object.values(regions).forEach(r => {
-        if (r.id !== region.id) r.remove();
+      if (isAddingDeletedRegion) return;
+      // 삭제 표시된 구간은 건드리지 않고, 이전 선택 구간만 제거
+      const deletedIds = new Set(deletedRegions.map(d => d.id));
+      Object.values(wavesurfer.regions.list).forEach(r => {
+        if (r.id !== region.id && !deletedIds.has(r.id)) r.remove();
       });
       currentRegion = region;
       startTimeEl.textContent = formatTime(region.start);
       endTimeEl.textContent   = formatTime(region.end);
+      syncInputsFromRegion(region);
       setButtonsEnabled(true);
     }
 
@@ -342,6 +494,30 @@
       e.preventDefault();
       uploadArea.classList.remove('drag-over');
       if (e.dataTransfer.files[0]) loadFile(e.dataTransfer.files[0]);
+    });
+
+    btnApplyRange.addEventListener('click', () => {
+      if (!wavesurfer || !audioBuffer) return;
+      const duration = audioBuffer.duration;
+      const s = parseFloat(inputStart.value);
+      const e = parseFloat(inputEnd.value);
+
+      if (isNaN(s) || isNaN(e)) {
+        showError('시작과 끝 시간을 모두 입력해주세요.');
+        return;
+      }
+      if (s < 0 || e > duration || s >= e) {
+        showError(`유효한 범위를 입력해주세요. (0 ~ ${duration.toFixed(1)}초, 시작 < 끝)`);
+        return;
+      }
+      clearError();
+
+      // 삭제 구간은 유지하고 현재 선택 구간만 교체
+      const deletedIds = new Set(deletedRegions.map(d => d.id));
+      Object.values(wavesurfer.regions.list).forEach(r => {
+        if (!deletedIds.has(r.id)) r.remove();
+      });
+      wavesurfer.addRegion({ start: s, end: e, drag: true, resize: true });
     });
 
     btnPlay.addEventListener('click', () => {
@@ -372,34 +548,117 @@
 
     btnDelete.addEventListener('click', () => {
       if (!audioBuffer || !currentRegion) return;
-      setLoading(btnDelete, true);
-      setTimeout(() => {
-        try {
-          editedBuffer = deleteSegment(audioBuffer, currentRegion.start, currentRegion.end);
-          editedSuffix = '_편집';
-          btnDownload.disabled = false;
-        } catch (err) {
-          showError('처리 중 오류가 발생했습니다: ' + err.message);
-        } finally {
-          btnDelete.innerHTML = '구간 삭제';
-          btnExtract.disabled = currentRegion === null;
-          btnDelete.disabled  = currentRegion === null;
+
+      const newStart = currentRegion.start;
+      const newEnd   = currentRegion.end;
+
+      // 겹치는 기존 삭제 구간 수집
+      const overlapping = deletedRegions.filter(d => d.start < newEnd && d.end > newStart);
+
+      // 머지된 범위 계산
+      let mergedStart = newStart;
+      let mergedEnd   = newEnd;
+      for (const d of overlapping) {
+        mergedStart = Math.min(mergedStart, d.start);
+        mergedEnd   = Math.max(mergedEnd,   d.end);
+      }
+
+      // 겹치는 기존 오버레이 제거
+      const overlappingIds = new Set(overlapping.map(d => d.id));
+      for (const d of overlapping) {
+        const r = wavesurfer.regions.list[d.id];
+        if (r) r.remove();
+      }
+      deletedRegions = deletedRegions.filter(d => !overlappingIds.has(d.id));
+
+      // 현재 선택 구간 제거 후 머지된 오버레이 추가
+      currentRegion.remove();
+      const mergedRegion = addDeletedRegionOverlay(mergedStart, mergedEnd);
+      const added = { start: mergedStart, end: mergedEnd, id: mergedRegion.id };
+      deletedRegions.push(added);
+      undoStack.push({ added: [added], removed: overlapping });
+
+      currentRegion = null;
+      startTimeEl.textContent = '-';
+      endTimeEl.textContent   = '-';
+      inputStart.value = '';
+      inputEnd.value   = '';
+      setButtonsEnabled(false);
+      btnUndo.disabled     = false;
+      btnDownload.disabled = false;
+      editedSuffix = '_편집';
+    });
+
+    btnRecover.addEventListener('click', () => {
+      if (!audioBuffer || !currentRegion) return;
+
+      const recovered = applyRecovery(currentRegion.start, currentRegion.end);
+      if (!recovered) {
+        showError('선택한 구간에 삭제된 영역이 없습니다.');
+        return;
+      }
+
+      currentRegion.remove();
+      currentRegion = null;
+      startTimeEl.textContent = '-';
+      endTimeEl.textContent   = '-';
+      inputStart.value = '';
+      inputEnd.value   = '';
+      setButtonsEnabled(false);
+      btnUndo.disabled     = false;
+      btnDownload.disabled = deletedRegions.length === 0;
+    });
+
+    btnUndo.addEventListener('click', () => {
+      if (undoStack.length === 0) return;
+      const { added, removed } = undoStack.pop();
+
+      // added 배열의 오버레이 모두 제거
+      for (const a of added) {
+        const r = wavesurfer.regions.list[a.id];
+        if (r) r.remove();
+        deletedRegions = deletedRegions.filter(d => d.id !== a.id);
+      }
+
+      // removed 구간 복원 + undoStack 내 구 ID 갱신
+      for (const seg of removed) {
+        const restored = addDeletedRegionOverlay(seg.start, seg.end);
+        deletedRegions.push({ start: seg.start, end: seg.end, id: restored.id });
+
+        for (const entry of undoStack) {
+          for (const a of entry.added) {
+            if (a.id === seg.id) a.id = restored.id;
+          }
+          for (const rm of entry.removed) {
+            if (rm.id === seg.id) rm.id = restored.id;
+          }
         }
-      }, 50);
+      }
+
+      btnUndo.disabled     = undoStack.length === 0;
+      btnDownload.disabled = deletedRegions.length === 0;
     });
 
     btnDownload.addEventListener('click', () => {
-      if (!editedBuffer) return;
+      if (deletedRegions.length === 0 && !editedBuffer) return;
       setLoading(btnDownload, true);
       setTimeout(() => {
         try {
-          const mp3 = audioBufferToMp3(editedBuffer);
-          downloadBlob(mp3, currentFileName + editedSuffix + '.mp3');
+          let outputBuffer, suffix;
+          if (deletedRegions.length > 0) {
+            outputBuffer = applyAllDeletions(audioBuffer, deletedRegions);
+            suffix = '_편집';
+          } else {
+            outputBuffer = editedBuffer;
+            suffix = editedSuffix;
+          }
+          const mp3 = audioBufferToMp3(outputBuffer);
+          downloadBlob(mp3, currentFileName + suffix + '.mp3');
         } catch (err) {
           showError('다운로드 중 오류가 발생했습니다: ' + err.message);
         } finally {
           btnDownload.innerHTML = '다운로드';
-          btnDownload.disabled  = editedBuffer === null;
+          btnDownload.disabled  = deletedRegions.length === 0 && !editedBuffer;
         }
       }, 50);
     });
