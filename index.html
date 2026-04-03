@@ -16,7 +16,52 @@
       align-items: center;
       padding: 40px 20px;
     }
-    h1 { font-size: 1.8rem; margin-bottom: 32px; letter-spacing: -0.5px; }
+    h1 { font-size: 1.8rem; margin-bottom: 20px; letter-spacing: -0.5px; }
+
+    #tab-bar { display: flex; gap: 4px; margin-bottom: 28px; }
+    .tab {
+      padding: 8px 28px;
+      border: none;
+      border-radius: 8px 8px 0 0;
+      background: #2d2d4e;
+      color: #aaa;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s, color 0.2s;
+    }
+    .tab.active { background: #7c6af7; color: #fff; }
+
+    .merge-slot {
+      width: 100%;
+      border: 2px dashed #444;
+      border-radius: 12px;
+      padding: 28px;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color 0.2s, background 0.2s;
+      margin-bottom: 12px;
+      position: relative;
+    }
+    .merge-slot:hover, .merge-slot.drag-over { border-color: #7c6af7; background: rgba(124,106,247,0.08); }
+    .merge-slot.loaded { border-style: solid; border-color: #10b981; cursor: default; }
+    .merge-slot.loaded:hover { border-color: #10b981; background: rgba(16,185,129,0.06); }
+    .merge-slot-info { display: flex; align-items: center; justify-content: space-between; font-size: 0.9rem; }
+    .merge-slot-clear {
+      background: none; border: none; color: #ef4444;
+      font-size: 1.1rem; cursor: pointer; padding: 2px 6px; border-radius: 4px;
+    }
+    .merge-slot-clear:hover { background: rgba(239,68,68,0.1); }
+    #merge-order-list { list-style: none; margin-bottom: 16px; padding: 0; }
+    #merge-order-list li {
+      display: flex; align-items: center; gap: 12px;
+      padding: 10px 14px; background: #2d2d4e; border-radius: 8px; margin-bottom: 8px;
+      cursor: grab; user-select: none; border: 2px solid transparent; transition: border-color 0.15s;
+    }
+    #merge-order-list li.drag-over-item { border-color: #7c6af7; }
+    .merge-order-num { color: #7c6af7; font-weight: 700; width: 20px; }
+    .btn-merge { background: #7c6af7; color: #fff; }
+    #merge-error-msg { color: #ef4444; font-size: 0.85rem; margin-top: 8px; min-height: 20px; }
 
     #upload-area {
       width: 100%;
@@ -116,6 +161,34 @@
     }
     @keyframes spin { to { transform: rotate(360deg); } }
 
+    #waveform { touch-action: none; }
+
+    @media (max-width: 600px) {
+      body { padding: 20px 12px; }
+      h1   { font-size: 1.4rem; margin-bottom: 16px; }
+
+      #tab-bar { width: 100%; max-width: 700px; }
+      .tab     { flex: 1; padding: 10px 0; text-align: center; }
+
+      button { min-height: 44px; }
+
+      #controls        { flex-wrap: wrap; }
+      #controls button { flex: 1; min-width: 120px; }
+
+      #actions      { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+      #btn-download { grid-column: 1 / -1; }
+
+      #time-input-row                      { flex-direction: column; align-items: stretch; gap: 8px; }
+      #time-input-row .inputs-row          { display: flex; gap: 8px; align-items: center; }
+      #time-input-row input[type="number"] { flex: 1; width: auto; font-size: 16px; padding: 10px 12px; }
+      #time-input-row label                { font-size: 0.8rem; }
+      #btn-apply-range                     { width: 100%; }
+
+      .merge-slot          { padding: 20px 16px; }
+      #merge-order-list li { min-height: 48px; }
+      #btn-merge           { width: 100%; }
+    }
+
     .deleted-region {
       background: repeating-linear-gradient(
         45deg,
@@ -144,6 +217,12 @@
 <body>
   <h1>🎵 MP3 편집기</h1>
 
+  <div id="tab-bar">
+    <button class="tab active" id="tab-editor">편집</button>
+    <button class="tab" id="tab-merge">합치기</button>
+  </div>
+
+  <div id="editor-section" style="width:100%; display:flex; flex-direction:column; align-items:center;">
   <div id="upload-area">
     <input type="file" id="file-input" accept=".mp3,audio/mpeg">
     <div style="font-size: 2rem; margin-bottom: 8px;">📂</div>
@@ -155,11 +234,13 @@
   <div id="editor">
     <div id="waveform"></div>
     <div id="time-input-row">
-      <label>시작(초)</label>
-      <input type="number" id="input-start" min="0" step="0.1" placeholder="0.0">
-      <span class="sep">~</span>
-      <label>끝(초)</label>
-      <input type="number" id="input-end" min="0" step="0.1" placeholder="0.0">
+      <div class="inputs-row">
+        <label>시작(초)</label>
+        <input type="number" id="input-start" min="0" step="0.1" placeholder="0.0">
+        <span class="sep">~</span>
+        <label>끝(초)</label>
+        <input type="number" id="input-end" min="0" step="0.1" placeholder="0.0">
+      </div>
       <button class="btn-apply" id="btn-apply-range">구간 적용</button>
     </div>
     <div id="region-info">
@@ -179,6 +260,50 @@
     </div>
     <div id="editor-error-msg"></div>
   </div>
+  </div><!-- /editor-section -->
+
+  <div id="merge-section" style="display:none; width:100%; max-width:700px;">
+    <div class="merge-slot" id="merge-slot-0">
+      <input type="file" id="merge-input-0" accept=".mp3,audio/mpeg" style="display:none">
+      <div class="merge-slot-placeholder">
+        <div style="font-size:1.5rem; margin-bottom:6px;">📂</div>
+        <strong>첫 번째 MP3 파일</strong>
+        <p style="color:#888; font-size:0.85rem; margin-top:4px;">클릭하거나 끌어다 놓기</p>
+      </div>
+      <div class="merge-slot-info" style="display:none">
+        <span class="merge-slot-name"></span>
+        <span class="merge-slot-duration" style="color:#7c6af7; font-weight:600;"></span>
+        <button class="merge-slot-clear" title="제거">×</button>
+      </div>
+    </div>
+    <div class="merge-slot" id="merge-slot-1">
+      <input type="file" id="merge-input-1" accept=".mp3,audio/mpeg" style="display:none">
+      <div class="merge-slot-placeholder">
+        <div style="font-size:1.5rem; margin-bottom:6px;">📂</div>
+        <strong>두 번째 MP3 파일</strong>
+        <p style="color:#888; font-size:0.85rem; margin-top:4px;">클릭하거나 끌어다 놓기</p>
+      </div>
+      <div class="merge-slot-info" style="display:none">
+        <span class="merge-slot-name"></span>
+        <span class="merge-slot-duration" style="color:#7c6af7; font-weight:600;"></span>
+        <button class="merge-slot-clear" title="제거">×</button>
+      </div>
+    </div>
+    <ul id="merge-order-list" style="display:none;">
+      <li data-idx="0" draggable="true">
+        <span class="merge-order-num">1</span>
+        <span class="merge-order-name"></span>
+        <span class="merge-order-dur" style="color:#aaa; font-size:0.85rem; margin-left:auto;"></span>
+      </li>
+      <li data-idx="1" draggable="true">
+        <span class="merge-order-num">2</span>
+        <span class="merge-order-name"></span>
+        <span class="merge-order-dur" style="color:#aaa; font-size:0.85rem; margin-left:auto;"></span>
+      </li>
+    </ul>
+    <button class="btn-merge" id="btn-merge" disabled>합치기 &amp; 다운로드</button>
+    <div id="merge-error-msg"></div>
+  </div>
 
   <script src="https://unpkg.com/wavesurfer.js@6.6.4/dist/wavesurfer.min.js"></script>
   <script src="https://unpkg.com/wavesurfer.js@6.6.4/dist/plugin/wavesurfer.regions.min.js"></script>
@@ -195,6 +320,13 @@
     let deletedRegions = [];      // 현재 표시된 삭제 구간 [{ start, end, id }]
     let undoStack = [];           // undo 스택 [{ added, removed[] }]
     let isAddingDeletedRegion = false; // region-created 이벤트 무시 플래그
+
+    // 합치기 상태
+    const mergeSlots = [
+      { audioBuffer: null, name: '', duration: 0 },
+      { audioBuffer: null, name: '', duration: 0 }
+    ];
+    let mergeOrder = [0, 1];
 
     const uploadArea    = document.getElementById('upload-area');
     const fileInput     = document.getElementById('file-input');
@@ -659,6 +791,255 @@
         } finally {
           btnDownload.innerHTML = '다운로드';
           btnDownload.disabled  = deletedRegions.length === 0 && !editedBuffer;
+        }
+      }, 50);
+    });
+
+    // ── 파형 터치 드래그 구간 선택 ───────────────────────────
+    {
+      const waveformEl = document.getElementById('waveform');
+      let touchRegionStart = null;
+      let touchDragRegion  = null;
+
+      waveformEl.addEventListener('pointerdown', (e) => {
+        if (e.pointerType !== 'touch' || !wavesurfer || !wavesurfer.getDuration()) return;
+        e.preventDefault();
+        waveformEl.setPointerCapture(e.pointerId);
+
+        const rect = waveformEl.getBoundingClientRect();
+        touchRegionStart = (e.clientX - rect.left) / rect.width * wavesurfer.getDuration();
+        touchDragRegion  = null;
+
+        const deletedIds = new Set(deletedRegions.map(d => d.id));
+        Object.values(wavesurfer.regions.list).forEach(r => {
+          if (!deletedIds.has(r.id)) r.remove();
+        });
+        currentRegion = null;
+        setButtonsEnabled(false);
+        startTimeEl.textContent = '-';
+        endTimeEl.textContent   = '-';
+        inputStart.value = '';
+        inputEnd.value   = '';
+      });
+
+      waveformEl.addEventListener('pointermove', (e) => {
+        if (e.pointerType !== 'touch' || touchRegionStart === null || !wavesurfer) return;
+
+        const rect    = waveformEl.getBoundingClientRect();
+        const ratio   = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+        const current = ratio * wavesurfer.getDuration();
+        const start   = Math.min(touchRegionStart, current);
+        const end     = Math.max(touchRegionStart, current);
+        if (end - start < 0.05) return;
+
+        isAddingDeletedRegion = true;
+        if (touchDragRegion) {
+          touchDragRegion.update({ start, end });
+        } else {
+          touchDragRegion = wavesurfer.addRegion({ start, end, drag: false, resize: false });
+        }
+        isAddingDeletedRegion = false;
+
+        startTimeEl.textContent = formatTime(start);
+        endTimeEl.textContent   = formatTime(end);
+        inputStart.value = start.toFixed(1);
+        inputEnd.value   = end.toFixed(1);
+      });
+
+      waveformEl.addEventListener('pointerup', (e) => {
+        if (e.pointerType !== 'touch' || !wavesurfer) return;
+
+        if (touchDragRegion && (touchDragRegion.end - touchDragRegion.start) > 0.05) {
+          isAddingDeletedRegion = true;
+          touchDragRegion.update({ drag: true, resize: true });
+          isAddingDeletedRegion = false;
+          currentRegion = touchDragRegion;
+          setButtonsEnabled(true);
+        } else if (touchDragRegion) {
+          touchDragRegion.remove();
+        }
+        touchRegionStart = null;
+        touchDragRegion  = null;
+      });
+
+      waveformEl.addEventListener('pointercancel', (e) => {
+        if (e.pointerType !== 'touch') return;
+        if (touchDragRegion) touchDragRegion.remove();
+        touchRegionStart = null;
+        touchDragRegion  = null;
+        currentRegion = null;
+        setButtonsEnabled(false);
+        startTimeEl.textContent = '-';
+        endTimeEl.textContent   = '-';
+      });
+    }
+
+    // ── 탭 전환 ──────────────────────────────────────────────
+    function switchTab(tab) {
+      const isEditor = tab === 'editor';
+      document.getElementById('editor-section').style.display = isEditor ? 'flex'  : 'none';
+      document.getElementById('merge-section').style.display  = isEditor ? 'none'  : 'block';
+      document.getElementById('tab-editor').classList.toggle('active', isEditor);
+      document.getElementById('tab-merge').classList.toggle('active', !isEditor);
+    }
+    document.getElementById('tab-editor').addEventListener('click', () => switchTab('editor'));
+    document.getElementById('tab-merge').addEventListener('click', () => switchTab('merge'));
+
+    // ── 합치기 ───────────────────────────────────────────────
+    function mergeBuffers(bufA, bufB) {
+      const channels = Math.max(bufA.numberOfChannels, bufB.numberOfChannels);
+      const sr = bufA.sampleRate;
+      const out = audioCtx.createBuffer(channels, bufA.length + bufB.length, sr);
+      for (let ch = 0; ch < channels; ch++) {
+        const srcA = Math.min(ch, bufA.numberOfChannels - 1);
+        const srcB = Math.min(ch, bufB.numberOfChannels - 1);
+        out.copyToChannel(bufA.getChannelData(srcA), ch, 0);
+        out.copyToChannel(bufB.getChannelData(srcB), ch, bufA.length);
+      }
+      return out;
+    }
+
+    function updateMergeSlotUI(idx) {
+      const slot = document.getElementById(`merge-slot-${idx}`);
+      const data = mergeSlots[idx];
+      if (data.audioBuffer) {
+        slot.classList.add('loaded');
+        slot.querySelector('.merge-slot-placeholder').style.display = 'none';
+        const info = slot.querySelector('.merge-slot-info');
+        info.style.display = 'flex';
+        info.querySelector('.merge-slot-name').textContent = data.name;
+        info.querySelector('.merge-slot-duration').textContent = data.duration.toFixed(1) + '초';
+      } else {
+        slot.classList.remove('loaded');
+        slot.querySelector('.merge-slot-placeholder').style.display = 'block';
+        slot.querySelector('.merge-slot-info').style.display = 'none';
+      }
+      document.getElementById('btn-merge').disabled = !(mergeSlots[0].audioBuffer && mergeSlots[1].audioBuffer);
+    }
+
+    function updateMergeOrderList() {
+      const list = document.getElementById('merge-order-list');
+      const bothLoaded = mergeSlots[0].audioBuffer && mergeSlots[1].audioBuffer;
+      list.style.display = bothLoaded ? 'block' : 'none';
+      if (!bothLoaded) return;
+      list.querySelectorAll('li').forEach((li, i) => {
+        const idx = mergeOrder[i];
+        li.dataset.idx = idx;
+        li.querySelector('.merge-order-num').textContent = i + 1;
+        li.querySelector('.merge-order-name').textContent = mergeSlots[idx].name;
+        li.querySelector('.merge-order-dur').textContent = mergeSlots[idx].duration.toFixed(1) + '초';
+      });
+    }
+
+    function loadMergeFile(idx, file) {
+      if (!file.type.includes('mpeg') && !file.name.toLowerCase().endsWith('.mp3')) {
+        document.getElementById('merge-error-msg').textContent = 'MP3 파일만 지원합니다.';
+        return;
+      }
+      document.getElementById('merge-error-msg').textContent = '';
+      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        try {
+          await audioCtx.resume();
+          const buf = await audioCtx.decodeAudioData(e.target.result.slice(0));
+          mergeSlots[idx].audioBuffer = buf;
+          mergeSlots[idx].name = file.name.replace(/\.mp3$/i, '');
+          mergeSlots[idx].duration = buf.duration;
+          updateMergeSlotUI(idx);
+          updateMergeOrderList();
+        } catch (err) {
+          document.getElementById('merge-error-msg').textContent = '파일을 읽을 수 없습니다: ' + err.message;
+        }
+      };
+      reader.readAsArrayBuffer(file);
+    }
+
+    // 슬롯 이벤트 연결
+    [0, 1].forEach(idx => {
+      const slot  = document.getElementById(`merge-slot-${idx}`);
+      const input = document.getElementById(`merge-input-${idx}`);
+
+      slot.addEventListener('click', (e) => {
+        if (!mergeSlots[idx].audioBuffer && !e.target.classList.contains('merge-slot-clear'))
+          input.click();
+      });
+      input.addEventListener('change', (e) => {
+        if (e.target.files[0]) loadMergeFile(idx, e.target.files[0]);
+      });
+      slot.addEventListener('dragover', (e) => {
+        if (!mergeSlots[idx].audioBuffer) { e.preventDefault(); slot.classList.add('drag-over'); }
+      });
+      slot.addEventListener('dragleave', () => slot.classList.remove('drag-over'));
+      slot.addEventListener('drop', (e) => {
+        e.preventDefault(); slot.classList.remove('drag-over');
+        if (!mergeSlots[idx].audioBuffer && e.dataTransfer.files[0])
+          loadMergeFile(idx, e.dataTransfer.files[0]);
+      });
+      slot.querySelector('.merge-slot-clear').addEventListener('click', (e) => {
+        e.stopPropagation();
+        mergeSlots[idx].audioBuffer = null;
+        mergeSlots[idx].name = '';
+        mergeSlots[idx].duration = 0;
+        mergeOrder = [0, 1];
+        input.value = '';
+        updateMergeSlotUI(idx);
+        updateMergeOrderList();
+        document.getElementById('merge-error-msg').textContent = '';
+      });
+    });
+
+    // 순서 목록 드래그 재정렬
+    let mergeDragSrc = null;
+    const mergeList = document.getElementById('merge-order-list');
+    mergeList.addEventListener('dragstart', (e) => {
+      mergeDragSrc = parseInt(e.target.closest('li').dataset.idx);
+      e.target.closest('li').style.opacity = '0.5';
+    });
+    mergeList.addEventListener('dragend', (e) => {
+      e.target.closest('li').style.opacity = '1';
+      mergeList.querySelectorAll('li').forEach(li => li.classList.remove('drag-over-item'));
+    });
+    mergeList.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      const li = e.target.closest('li');
+      if (li) {
+        mergeList.querySelectorAll('li').forEach(l => l.classList.remove('drag-over-item'));
+        li.classList.add('drag-over-item');
+      }
+    });
+    mergeList.addEventListener('drop', (e) => {
+      e.preventDefault();
+      const li = e.target.closest('li');
+      if (!li) return;
+      const targetIdx = parseInt(li.dataset.idx);
+      if (mergeDragSrc !== null && mergeDragSrc !== targetIdx) {
+        const a = mergeOrder.indexOf(mergeDragSrc);
+        const b = mergeOrder.indexOf(targetIdx);
+        [mergeOrder[a], mergeOrder[b]] = [mergeOrder[b], mergeOrder[a]];
+        updateMergeOrderList();
+      }
+      mergeDragSrc = null;
+    });
+
+    // 합치기 & 다운로드
+    document.getElementById('btn-merge').addEventListener('click', () => {
+      const [idxA, idxB] = mergeOrder;
+      const bufA = mergeSlots[idxA].audioBuffer;
+      const bufB = mergeSlots[idxB].audioBuffer;
+      if (!bufA || !bufB) return;
+      const btn = document.getElementById('btn-merge');
+      setLoading(btn, true);
+      setTimeout(() => {
+        try {
+          const merged = mergeBuffers(bufA, bufB);
+          const mp3    = audioBufferToMp3(merged);
+          downloadBlob(mp3, `${mergeSlots[idxA].name}_${mergeSlots[idxB].name}_합치기.mp3`);
+        } catch (err) {
+          document.getElementById('merge-error-msg').textContent = '합치기 중 오류: ' + err.message;
+        } finally {
+          btn.innerHTML = '합치기 & 다운로드';
+          btn.disabled  = false;
         }
       }, 50);
     });
