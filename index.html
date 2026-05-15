@@ -187,7 +187,50 @@
       .merge-slot          { padding: 20px 16px; }
       #merge-order-list li { min-height: 48px; }
       #btn-merge           { width: 100%; }
+
+      /* merge editor mobile */
+      .merge-slot-info { flex-wrap: wrap; gap: 8px; }
+      .merge-slot-name { flex: 1; }
+      .merge-slot-actions { width: 100%; justify-content: space-between; }
+      .btn-merge-edit { flex: 1; }
+      .merge-time-row { flex-direction: column; align-items: stretch; gap: 8px; }
+      .merge-time-row .inputs-row { display: flex; gap: 8px; align-items: center; }
+      .merge-time-row input[type="number"] { flex: 1; width: auto; font-size: 16px; padding: 10px 12px; }
+      .btn-merge-delete { width: 100%; }
+      .merge-editor-controls button { flex: 1; min-width: 0; }
+      .merge-edit-status { width: 100%; text-align: center; margin-left: 0; }
     }
+
+    /* Merge slot editor */
+    .merge-slot-actions { display: flex; gap: 8px; align-items: center; }
+    .btn-merge-edit {
+      background: #2d2d4e; color: #7c6af7;
+      border: 1px solid #44445e; padding: 6px 14px; font-size: 0.85rem;
+    }
+    .btn-merge-edit.open { background: #7c6af7; color: #fff; border-color: #7c6af7; }
+    .merge-editor {
+      display: none; margin-top: 14px; padding-top: 14px;
+      border-top: 1px solid #333; text-align: left;
+    }
+    .merge-editor.open { display: block; }
+    .merge-waveform {
+      width: 100%; background: #16213e; border-radius: 8px;
+      overflow: hidden; margin-bottom: 12px; touch-action: none;
+    }
+    .merge-time-row {
+      display: flex; align-items: center; gap: 10px;
+      margin-bottom: 12px; flex-wrap: wrap;
+    }
+    .merge-time-row label { font-size: 0.85rem; color: #aaa; white-space: nowrap; }
+    .merge-time-row input[type="number"] {
+      width: 90px; padding: 7px 10px; background: #2d2d4e;
+      border: 1px solid #444; border-radius: 8px; color: #eee;
+      font-size: 0.9rem; outline: none; transition: border-color 0.2s;
+    }
+    .merge-time-row input[type="number"]:focus { border-color: #7c6af7; }
+    .merge-time-row input[type="number"]::placeholder { color: #666; }
+    .merge-editor-controls { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+    .merge-edit-status { font-size: 0.85rem; color: #10b981; margin-left: auto; }
 
     .deleted-region {
       background: repeating-linear-gradient(
@@ -273,7 +316,28 @@
       <div class="merge-slot-info" style="display:none">
         <span class="merge-slot-name"></span>
         <span class="merge-slot-duration" style="color:#7c6af7; font-weight:600;"></span>
-        <button class="merge-slot-clear" title="제거">×</button>
+        <div class="merge-slot-actions">
+          <button class="btn-merge-edit" id="btn-merge-edit-0">편집 ▶</button>
+          <button class="merge-slot-clear" title="제거">×</button>
+        </div>
+      </div>
+      <div class="merge-editor" id="merge-editor-0">
+        <div class="merge-waveform" id="merge-waveform-0"></div>
+        <div class="merge-time-row">
+          <div class="inputs-row">
+            <label>시작(초)</label>
+            <input type="number" id="merge-start-0" min="0" step="0.1" placeholder="0.0">
+            <span class="sep">~</span>
+            <label>끝(초)</label>
+            <input type="number" id="merge-end-0" min="0" step="0.1" placeholder="0.0">
+          </div>
+          <button class="btn-delete btn-merge-delete" id="btn-merge-delete-0" disabled>구간 삭제</button>
+        </div>
+        <div class="merge-editor-controls">
+          <button class="btn-secondary" id="btn-merge-play-0">▶ 재생</button>
+          <button class="btn-undo" id="btn-merge-undo-0" disabled>↩ 실행취소</button>
+          <span class="merge-edit-status" id="merge-edit-status-0"></span>
+        </div>
       </div>
     </div>
     <div class="merge-slot" id="merge-slot-1">
@@ -286,7 +350,28 @@
       <div class="merge-slot-info" style="display:none">
         <span class="merge-slot-name"></span>
         <span class="merge-slot-duration" style="color:#7c6af7; font-weight:600;"></span>
-        <button class="merge-slot-clear" title="제거">×</button>
+        <div class="merge-slot-actions">
+          <button class="btn-merge-edit" id="btn-merge-edit-1">편집 ▶</button>
+          <button class="merge-slot-clear" title="제거">×</button>
+        </div>
+      </div>
+      <div class="merge-editor" id="merge-editor-1">
+        <div class="merge-waveform" id="merge-waveform-1"></div>
+        <div class="merge-time-row">
+          <div class="inputs-row">
+            <label>시작(초)</label>
+            <input type="number" id="merge-start-1" min="0" step="0.1" placeholder="0.0">
+            <span class="sep">~</span>
+            <label>끝(초)</label>
+            <input type="number" id="merge-end-1" min="0" step="0.1" placeholder="0.0">
+          </div>
+          <button class="btn-delete btn-merge-delete" id="btn-merge-delete-1" disabled>구간 삭제</button>
+        </div>
+        <div class="merge-editor-controls">
+          <button class="btn-secondary" id="btn-merge-play-1">▶ 재생</button>
+          <button class="btn-undo" id="btn-merge-undo-1" disabled>↩ 실행취소</button>
+          <span class="merge-edit-status" id="merge-edit-status-1"></span>
+        </div>
       </div>
     </div>
     <ul id="merge-order-list" style="display:none;">
@@ -323,8 +408,12 @@
 
     // 합치기 상태
     const mergeSlots = [
-      { audioBuffer: null, name: '', duration: 0 },
-      { audioBuffer: null, name: '', duration: 0 }
+      { audioBuffer: null, name: '', duration: 0, rawBlob: null,
+        deletedRegions: [], undoStack: [], wavesurfer: null,
+        isEditorOpen: false, isAddingOverlay: false, currentRegion: null },
+      { audioBuffer: null, name: '', duration: 0, rawBlob: null,
+        deletedRegions: [], undoStack: [], wavesurfer: null,
+        isEditorOpen: false, isAddingOverlay: false, currentRegion: null }
     ];
     let mergeOrder = [0, 1];
 
@@ -885,6 +974,185 @@
     document.getElementById('tab-editor').addEventListener('click', () => switchTab('editor'));
     document.getElementById('tab-merge').addEventListener('click', () => switchTab('merge'));
 
+    // ── 합치기 슬롯 편집 ─────────────────────────────────────
+    function addMergeDeletedOverlay(idx, start, end) {
+      const slot = mergeSlots[idx];
+      slot.isAddingOverlay = true;
+      const r = slot.wavesurfer.addRegion({ start, end, drag: false, resize: false, color: 'rgba(239, 68, 68, 0.25)' });
+      markDeletedRegion(r);
+      slot.isAddingOverlay = false;
+      return r;
+    }
+
+    function handleMergeRegion(idx, region) {
+      const slot = mergeSlots[idx];
+      if (slot.isAddingOverlay) return;
+      const deletedIds = new Set(slot.deletedRegions.map(d => d.id));
+      Object.values(slot.wavesurfer.regions.list).forEach(r => {
+        if (r.id !== region.id && !deletedIds.has(r.id)) r.remove();
+      });
+      slot.currentRegion = region;
+      document.getElementById(`merge-start-${idx}`).value = region.start.toFixed(1);
+      document.getElementById(`merge-end-${idx}`).value   = region.end.toFixed(1);
+      document.getElementById(`btn-merge-delete-${idx}`).disabled = false;
+    }
+
+    function updateMergeEditStatus(idx) {
+      const count = mergeSlots[idx].deletedRegions.length;
+      document.getElementById(`merge-edit-status-${idx}`).textContent = count > 0 ? `${count}구간 삭제됨` : '';
+    }
+
+    function attachMergeTouchDrag(idx) {
+      const el   = document.getElementById(`merge-waveform-${idx}`);
+      const slot = mergeSlots[idx];
+      let touchStart = null, touchRegion = null;
+
+      el.addEventListener('pointerdown', (e) => {
+        if (e.pointerType !== 'touch' || !slot.wavesurfer || !slot.wavesurfer.getDuration()) return;
+        e.preventDefault();
+        el.setPointerCapture(e.pointerId);
+        const rect = el.getBoundingClientRect();
+        touchStart = (e.clientX - rect.left) / rect.width * slot.wavesurfer.getDuration();
+        touchRegion = null;
+        const deletedIds = new Set(slot.deletedRegions.map(d => d.id));
+        Object.values(slot.wavesurfer.regions.list).forEach(r => { if (!deletedIds.has(r.id)) r.remove(); });
+        slot.currentRegion = null;
+        document.getElementById(`merge-start-${idx}`).value = '';
+        document.getElementById(`merge-end-${idx}`).value   = '';
+        document.getElementById(`btn-merge-delete-${idx}`).disabled = true;
+      });
+
+      el.addEventListener('pointermove', (e) => {
+        if (e.pointerType !== 'touch' || touchStart === null || !slot.wavesurfer) return;
+        const rect  = el.getBoundingClientRect();
+        const ratio = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+        const cur   = ratio * slot.wavesurfer.getDuration();
+        const start = Math.min(touchStart, cur), end = Math.max(touchStart, cur);
+        if (end - start < 0.05) return;
+        slot.isAddingOverlay = true;
+        if (touchRegion) { touchRegion.update({ start, end }); }
+        else { touchRegion = slot.wavesurfer.addRegion({ start, end, drag: false, resize: false }); }
+        slot.isAddingOverlay = false;
+        document.getElementById(`merge-start-${idx}`).value = start.toFixed(1);
+        document.getElementById(`merge-end-${idx}`).value   = end.toFixed(1);
+      });
+
+      el.addEventListener('pointerup', (e) => {
+        if (e.pointerType !== 'touch' || !slot.wavesurfer) return;
+        if (touchRegion && (touchRegion.end - touchRegion.start) > 0.05) {
+          slot.isAddingOverlay = true;
+          touchRegion.update({ drag: true, resize: true });
+          slot.isAddingOverlay = false;
+          slot.currentRegion = touchRegion;
+          document.getElementById(`btn-merge-delete-${idx}`).disabled = false;
+        } else if (touchRegion) { touchRegion.remove(); }
+        touchStart = null; touchRegion = null;
+      });
+
+      el.addEventListener('pointercancel', (e) => {
+        if (e.pointerType !== 'touch') return;
+        if (touchRegion) touchRegion.remove();
+        touchStart = null; touchRegion = null;
+        slot.currentRegion = null;
+        document.getElementById(`btn-merge-delete-${idx}`).disabled = true;
+        document.getElementById(`merge-start-${idx}`).value = '';
+        document.getElementById(`merge-end-${idx}`).value   = '';
+      });
+    }
+
+    function initMergeWavesurfer(idx) {
+      const slot = mergeSlots[idx];
+      if (slot.wavesurfer) return;
+      const ws = WaveSurfer.create({
+        container: `#merge-waveform-${idx}`,
+        waveColor: '#4F86C6',
+        progressColor: '#2D5FA6',
+        height: 100,
+        plugins: [ WaveSurfer.regions.create({ dragSelection: { slop: 5 }, regions: [] }) ]
+      });
+      slot.wavesurfer = ws;
+      const btnPlay = document.getElementById(`btn-merge-play-${idx}`);
+      ws.on('play',   () => { btnPlay.textContent = '⏸ 일시정지'; });
+      ws.on('pause',  () => { btnPlay.textContent = '▶ 재생'; });
+      ws.on('finish', () => { btnPlay.textContent = '▶ 재생'; });
+      ws.on('region-created', (r) => handleMergeRegion(idx, r));
+      ws.on('region-updated', (r) => handleMergeRegion(idx, r));
+      const url = URL.createObjectURL(slot.rawBlob);
+      ws.load(url);
+      ws.on('ready', () => URL.revokeObjectURL(url));
+      ws.on('error', () => URL.revokeObjectURL(url));
+      attachMergeTouchDrag(idx);
+    }
+
+    function toggleMergeEditor(idx) {
+      const slot  = mergeSlots[idx];
+      const panel = document.getElementById(`merge-editor-${idx}`);
+      const btn   = document.getElementById(`btn-merge-edit-${idx}`);
+      slot.isEditorOpen = !slot.isEditorOpen;
+      panel.classList.toggle('open', slot.isEditorOpen);
+      btn.classList.toggle('open', slot.isEditorOpen);
+      btn.textContent = slot.isEditorOpen ? '편집 ▼' : '편집 ▶';
+      if (slot.isEditorOpen && !slot.wavesurfer) initMergeWavesurfer(idx);
+    }
+
+    function mergeDeleteRegion(idx) {
+      const slot = mergeSlots[idx];
+      if (!slot.audioBuffer || !slot.currentRegion) return;
+      const ws = slot.wavesurfer;
+      const newStart = slot.currentRegion.start, newEnd = slot.currentRegion.end;
+      const overlapping = slot.deletedRegions.filter(d => d.start < newEnd && d.end > newStart);
+      let mStart = newStart, mEnd = newEnd;
+      for (const d of overlapping) { mStart = Math.min(mStart, d.start); mEnd = Math.max(mEnd, d.end); }
+      const overIds = new Set(overlapping.map(d => d.id));
+      for (const d of overlapping) { const r = ws.regions.list[d.id]; if (r) r.remove(); }
+      slot.deletedRegions = slot.deletedRegions.filter(d => !overIds.has(d.id));
+      slot.currentRegion.remove();
+      const merged = addMergeDeletedOverlay(idx, mStart, mEnd);
+      const added = { start: mStart, end: mEnd, id: merged.id };
+      slot.deletedRegions.push(added);
+      slot.undoStack.push({ added: [added], removed: overlapping });
+      slot.currentRegion = null;
+      document.getElementById(`merge-start-${idx}`).value = '';
+      document.getElementById(`merge-end-${idx}`).value   = '';
+      document.getElementById(`btn-merge-delete-${idx}`).disabled = true;
+      document.getElementById(`btn-merge-undo-${idx}`).disabled   = false;
+      updateMergeEditStatus(idx);
+    }
+
+    function mergeUndoDelete(idx) {
+      const slot = mergeSlots[idx];
+      if (slot.undoStack.length === 0) return;
+      const ws = slot.wavesurfer;
+      const { added, removed } = slot.undoStack.pop();
+      for (const a of added) {
+        const r = ws.regions.list[a.id]; if (r) r.remove();
+        slot.deletedRegions = slot.deletedRegions.filter(d => d.id !== a.id);
+      }
+      for (const seg of removed) {
+        const restored = addMergeDeletedOverlay(idx, seg.start, seg.end);
+        slot.deletedRegions.push({ start: seg.start, end: seg.end, id: restored.id });
+        for (const entry of slot.undoStack) {
+          for (const a of entry.added)   { if (a.id  === seg.id) a.id  = restored.id; }
+          for (const rm of entry.removed) { if (rm.id === seg.id) rm.id = restored.id; }
+        }
+      }
+      document.getElementById(`btn-merge-undo-${idx}`).disabled = slot.undoStack.length === 0;
+      updateMergeEditStatus(idx);
+    }
+
+    function resetMergeSlotEditor(idx) {
+      const slot = mergeSlots[idx];
+      if (slot.wavesurfer) { slot.wavesurfer.destroy(); slot.wavesurfer = null; }
+      slot.deletedRegions = []; slot.undoStack = [];
+      slot.isEditorOpen = false; slot.currentRegion = null;
+      document.getElementById(`merge-editor-${idx}`).classList.remove('open');
+      const editBtn = document.getElementById(`btn-merge-edit-${idx}`);
+      editBtn.classList.remove('open'); editBtn.textContent = '편집 ▶';
+      document.getElementById(`merge-edit-status-${idx}`).textContent = '';
+      document.getElementById(`btn-merge-delete-${idx}`).disabled = true;
+      document.getElementById(`btn-merge-undo-${idx}`).disabled   = true;
+    }
+
     // ── 합치기 ───────────────────────────────────────────────
     function mergeBuffers(bufA, bufB) {
       const channels = Math.max(bufA.numberOfChannels, bufB.numberOfChannels);
@@ -942,10 +1210,13 @@
       reader.onload = async (e) => {
         try {
           await audioCtx.resume();
-          const buf = await audioCtx.decodeAudioData(e.target.result.slice(0));
+          const raw = e.target.result;
+          const buf = await audioCtx.decodeAudioData(raw.slice(0));
+          resetMergeSlotEditor(idx);
           mergeSlots[idx].audioBuffer = buf;
-          mergeSlots[idx].name = file.name.replace(/\.mp3$/i, '');
-          mergeSlots[idx].duration = buf.duration;
+          mergeSlots[idx].name        = file.name.replace(/\.mp3$/i, '');
+          mergeSlots[idx].duration    = buf.duration;
+          mergeSlots[idx].rawBlob     = new Blob([raw], { type: 'audio/mpeg' });
           updateMergeSlotUI(idx);
           updateMergeOrderList();
         } catch (err) {
@@ -978,14 +1249,30 @@
       });
       slot.querySelector('.merge-slot-clear').addEventListener('click', (e) => {
         e.stopPropagation();
+        resetMergeSlotEditor(idx);
         mergeSlots[idx].audioBuffer = null;
-        mergeSlots[idx].name = '';
-        mergeSlots[idx].duration = 0;
+        mergeSlots[idx].name        = '';
+        mergeSlots[idx].duration    = 0;
+        mergeSlots[idx].rawBlob     = null;
         mergeOrder = [0, 1];
         input.value = '';
         updateMergeSlotUI(idx);
         updateMergeOrderList();
         document.getElementById('merge-error-msg').textContent = '';
+      });
+
+      document.getElementById(`btn-merge-edit-${idx}`).addEventListener('click', (e) => {
+        e.stopPropagation();
+        toggleMergeEditor(idx);
+      });
+      document.getElementById(`btn-merge-play-${idx}`).addEventListener('click', () => {
+        if (mergeSlots[idx].wavesurfer) mergeSlots[idx].wavesurfer.playPause();
+      });
+      document.getElementById(`btn-merge-delete-${idx}`).addEventListener('click', () => {
+        mergeDeleteRegion(idx);
+      });
+      document.getElementById(`btn-merge-undo-${idx}`).addEventListener('click', () => {
+        mergeUndoDelete(idx);
       });
     });
 
@@ -1025,14 +1312,18 @@
     // 합치기 & 다운로드
     document.getElementById('btn-merge').addEventListener('click', () => {
       const [idxA, idxB] = mergeOrder;
-      const bufA = mergeSlots[idxA].audioBuffer;
-      const bufB = mergeSlots[idxB].audioBuffer;
-      if (!bufA || !bufB) return;
+      if (!mergeSlots[idxA].audioBuffer || !mergeSlots[idxB].audioBuffer) return;
       const btn = document.getElementById('btn-merge');
       setLoading(btn, true);
       setTimeout(() => {
         try {
-          const merged = mergeBuffers(bufA, bufB);
+          const editedA = mergeSlots[idxA].deletedRegions.length > 0
+            ? applyAllDeletions(mergeSlots[idxA].audioBuffer, mergeSlots[idxA].deletedRegions)
+            : mergeSlots[idxA].audioBuffer;
+          const editedB = mergeSlots[idxB].deletedRegions.length > 0
+            ? applyAllDeletions(mergeSlots[idxB].audioBuffer, mergeSlots[idxB].deletedRegions)
+            : mergeSlots[idxB].audioBuffer;
+          const merged = mergeBuffers(editedA, editedB);
           const mp3    = audioBufferToMp3(merged);
           downloadBlob(mp3, `${mergeSlots[idxA].name}_${mergeSlots[idxB].name}_합치기.mp3`);
         } catch (err) {
