@@ -16,7 +16,22 @@
       align-items: center;
       padding: 40px 20px;
     }
-    h1 { font-size: 1.8rem; margin-bottom: 20px; letter-spacing: -0.5px; }
+    h1 { font-size: 1.8rem; margin-bottom: 12px; letter-spacing: -0.5px; }
+
+    #lang-switcher { display: flex; gap: 4px; margin-bottom: 20px; }
+    .lang-btn {
+      padding: 4px 12px;
+      border: 1px solid #444;
+      border-radius: 6px;
+      background: #2d2d4e;
+      color: #aaa;
+      font-size: 0.8rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 0.2s, color 0.2s, border-color 0.2s;
+    }
+    .lang-btn.active { background: #7c6af7; color: #fff; border-color: #7c6af7; }
+    .lang-btn:hover:not(.active) { border-color: #7c6af7; color: #eee; }
 
     #tab-bar { display: flex; gap: 4px; margin-bottom: 28px; }
     .tab {
@@ -165,7 +180,7 @@
 
     @media (max-width: 600px) {
       body { padding: 20px 12px; }
-      h1   { font-size: 1.4rem; margin-bottom: 16px; }
+      h1   { font-size: 1.4rem; margin-bottom: 10px; }
 
       #tab-bar { width: 100%; max-width: 700px; }
       .tab     { flex: 1; padding: 10px 0; text-align: center; }
@@ -188,7 +203,6 @@
       #merge-order-list li { min-height: 48px; }
       #btn-merge           { width: 100%; }
 
-      /* merge editor mobile */
       .merge-slot-info { flex-wrap: wrap; gap: 8px; }
       .merge-slot-name { flex: 1; }
       .merge-slot-actions { width: 100%; justify-content: space-between; }
@@ -201,7 +215,6 @@
       .merge-edit-status { width: 100%; text-align: center; margin-left: 0; }
     }
 
-    /* Merge slot editor */
     .merge-slot-actions { display: flex; gap: 8px; align-items: center; }
     .btn-merge-edit {
       background: #2d2d4e; color: #7c6af7;
@@ -287,19 +300,25 @@
   </style>
 </head>
 <body>
-  <h1>🎵 온라인 음악 파일 편집기</h1>
+  <h1>🎵 <span data-i18n="title">온라인 음악 파일 편집기</span></h1>
+
+  <div id="lang-switcher">
+    <button class="lang-btn active" data-lang="ko">KO</button>
+    <button class="lang-btn" data-lang="en">EN</button>
+    <button class="lang-btn" data-lang="ja">JA</button>
+  </div>
 
   <div id="tab-bar">
-    <button class="tab active" id="tab-editor">편집</button>
-    <button class="tab" id="tab-merge">합치기</button>
+    <button class="tab active" id="tab-editor" data-i18n="tabEditor">편집</button>
+    <button class="tab" id="tab-merge" data-i18n="tabMerge">합치기</button>
   </div>
 
   <div id="editor-section" style="width:100%; display:flex; flex-direction:column; align-items:center;">
   <div id="upload-area">
     <input type="file" id="file-input" accept=".mp3,audio/mpeg">
     <div style="font-size: 2rem; margin-bottom: 8px;">📂</div>
-    <strong>MP3 파일을 여기에 끌어다 놓거나 클릭하여 선택</strong>
-    <p>MP3 파일만 지원합니다</p>
+    <strong data-i18n="uploadTitle">MP3 파일을 여기에 끌어다 놓거나 클릭하여 선택</strong>
+    <p data-i18n="uploadHint">MP3 파일만 지원합니다</p>
     <div id="error-msg"></div>
   </div>
 
@@ -307,64 +326,64 @@
     <div id="waveform"></div>
     <div id="time-input-row">
       <div class="inputs-row">
-        <label>시작(초)</label>
+        <label data-i18n="labelStart">시작(초)</label>
         <input type="number" id="input-start" min="0" step="0.1" placeholder="0.0">
         <span class="sep">~</span>
-        <label>끝(초)</label>
+        <label data-i18n="labelEnd">끝(초)</label>
         <input type="number" id="input-end" min="0" step="0.1" placeholder="0.0">
       </div>
-      <button class="btn-apply" id="btn-apply-range">구간 적용</button>
+      <button class="btn-apply" id="btn-apply-range" data-i18n="btnApplyRange">구간 적용</button>
     </div>
     <div id="region-info">
-      <div>시작: <span id="start-time">-</span></div>
-      <div>끝: <span id="end-time">-</span></div>
+      <div><span data-i18n="regionStart">시작:</span> <span id="start-time">-</span></div>
+      <div><span data-i18n="regionEnd">끝:</span> <span id="end-time">-</span></div>
     </div>
     <div id="controls">
-      <button class="btn-secondary" id="btn-play">▶ 재생</button>
-      <button class="btn-secondary" id="btn-play-region" disabled>구간만 미리듣기</button>
+      <button class="btn-secondary" id="btn-play" data-i18n="btnPlay">▶ 재생</button>
+      <button class="btn-secondary" id="btn-play-region" disabled data-i18n="btnPlayRegion">구간만 미리듣기</button>
     </div>
     <div id="actions">
-      <button class="btn-extract" id="btn-extract" disabled>구간 추출</button>
-      <button class="btn-delete" id="btn-delete" disabled>구간 삭제</button>
-      <button class="btn-undo" id="btn-undo" disabled>↩ 되돌리기</button>
-      <button class="btn-recover" id="btn-recover" disabled>구간 복구</button>
-      <button class="btn-download" id="btn-download" disabled>다운로드</button>
+      <button class="btn-extract" id="btn-extract" disabled data-i18n="btnExtract">구간 추출</button>
+      <button class="btn-delete" id="btn-delete" disabled data-i18n="btnDelete">구간 삭제</button>
+      <button class="btn-undo" id="btn-undo" disabled data-i18n="btnUndo">↩ 되돌리기</button>
+      <button class="btn-recover" id="btn-recover" disabled data-i18n="btnRecover">구간 복구</button>
+      <button class="btn-download" id="btn-download" disabled data-i18n="btnDownload">다운로드</button>
     </div>
     <div id="editor-error-msg"></div>
   </div>
-  </div><!-- /editor-section -->
+  </div>
 
   <div id="merge-section" style="display:none; width:100%; max-width:700px;">
     <div class="merge-slot" id="merge-slot-0">
       <input type="file" id="merge-input-0" accept=".mp3,audio/mpeg" style="display:none">
       <div class="merge-slot-placeholder">
         <div style="font-size:1.5rem; margin-bottom:6px;">📂</div>
-        <strong>첫 번째 MP3 파일</strong>
-        <p style="color:#888; font-size:0.85rem; margin-top:4px;">클릭하거나 끌어다 놓기</p>
+        <strong data-i18n="mergeSlot0Title">첫 번째 MP3 파일</strong>
+        <p style="color:#888; font-size:0.85rem; margin-top:4px;" data-i18n="mergeSlotHint">클릭하거나 끌어다 놓기</p>
       </div>
       <div class="merge-slot-info" style="display:none">
         <span class="merge-slot-name"></span>
         <span class="merge-slot-duration" style="color:#7c6af7; font-weight:600;"></span>
         <div class="merge-slot-actions">
-          <button class="btn-merge-edit" id="btn-merge-edit-0">편집 ▶</button>
-          <button class="merge-slot-clear" title="제거">×</button>
+          <button class="btn-merge-edit" id="btn-merge-edit-0" data-i18n="btnMergeEdit">편집 ▶</button>
+          <button class="merge-slot-clear" title="×">×</button>
         </div>
       </div>
       <div class="merge-editor" id="merge-editor-0">
         <div class="merge-waveform" id="merge-waveform-0"></div>
         <div class="merge-time-row">
           <div class="inputs-row">
-            <label>시작(초)</label>
+            <label data-i18n="labelStart">시작(초)</label>
             <input type="number" id="merge-start-0" min="0" step="0.1" placeholder="0.0">
             <span class="sep">~</span>
-            <label>끝(초)</label>
+            <label data-i18n="labelEnd">끝(초)</label>
             <input type="number" id="merge-end-0" min="0" step="0.1" placeholder="0.0">
           </div>
-          <button class="btn-delete btn-merge-delete" id="btn-merge-delete-0" disabled>구간 삭제</button>
+          <button class="btn-delete btn-merge-delete" id="btn-merge-delete-0" disabled data-i18n="btnDelete">구간 삭제</button>
         </div>
         <div class="merge-editor-controls">
-          <button class="btn-secondary" id="btn-merge-play-0">▶ 재생</button>
-          <button class="btn-undo" id="btn-merge-undo-0" disabled>↩ 실행취소</button>
+          <button class="btn-secondary" id="btn-merge-play-0" data-i18n="btnPlay">▶ 재생</button>
+          <button class="btn-undo" id="btn-merge-undo-0" disabled data-i18n="btnMergeUndo">↩ 실행취소</button>
           <span class="merge-edit-status" id="merge-edit-status-0"></span>
         </div>
       </div>
@@ -373,32 +392,32 @@
       <input type="file" id="merge-input-1" accept=".mp3,audio/mpeg" style="display:none">
       <div class="merge-slot-placeholder">
         <div style="font-size:1.5rem; margin-bottom:6px;">📂</div>
-        <strong>두 번째 MP3 파일</strong>
-        <p style="color:#888; font-size:0.85rem; margin-top:4px;">클릭하거나 끌어다 놓기</p>
+        <strong data-i18n="mergeSlot1Title">두 번째 MP3 파일</strong>
+        <p style="color:#888; font-size:0.85rem; margin-top:4px;" data-i18n="mergeSlotHint">클릭하거나 끌어다 놓기</p>
       </div>
       <div class="merge-slot-info" style="display:none">
         <span class="merge-slot-name"></span>
         <span class="merge-slot-duration" style="color:#7c6af7; font-weight:600;"></span>
         <div class="merge-slot-actions">
-          <button class="btn-merge-edit" id="btn-merge-edit-1">편집 ▶</button>
-          <button class="merge-slot-clear" title="제거">×</button>
+          <button class="btn-merge-edit" id="btn-merge-edit-1" data-i18n="btnMergeEdit">편집 ▶</button>
+          <button class="merge-slot-clear" title="×">×</button>
         </div>
       </div>
       <div class="merge-editor" id="merge-editor-1">
         <div class="merge-waveform" id="merge-waveform-1"></div>
         <div class="merge-time-row">
           <div class="inputs-row">
-            <label>시작(초)</label>
+            <label data-i18n="labelStart">시작(초)</label>
             <input type="number" id="merge-start-1" min="0" step="0.1" placeholder="0.0">
             <span class="sep">~</span>
-            <label>끝(초)</label>
+            <label data-i18n="labelEnd">끝(초)</label>
             <input type="number" id="merge-end-1" min="0" step="0.1" placeholder="0.0">
           </div>
-          <button class="btn-delete btn-merge-delete" id="btn-merge-delete-1" disabled>구간 삭제</button>
+          <button class="btn-delete btn-merge-delete" id="btn-merge-delete-1" disabled data-i18n="btnDelete">구간 삭제</button>
         </div>
         <div class="merge-editor-controls">
-          <button class="btn-secondary" id="btn-merge-play-1">▶ 재생</button>
-          <button class="btn-undo" id="btn-merge-undo-1" disabled>↩ 실행취소</button>
+          <button class="btn-secondary" id="btn-merge-play-1" data-i18n="btnPlay">▶ 재생</button>
+          <button class="btn-undo" id="btn-merge-undo-1" disabled data-i18n="btnMergeUndo">↩ 실행취소</button>
           <span class="merge-edit-status" id="merge-edit-status-1"></span>
         </div>
       </div>
@@ -415,7 +434,7 @@
         <span class="merge-order-dur" style="color:#aaa; font-size:0.85rem; margin-left:auto;"></span>
       </li>
     </ul>
-    <button class="btn-merge" id="btn-merge" disabled>합치기 &amp; 다운로드</button>
+    <button class="btn-merge" id="btn-merge" disabled data-i18n="btnMerge">합치기 &amp; 다운로드</button>
     <div id="merge-error-msg"></div>
   </div>
 
@@ -424,6 +443,215 @@
   <script src="https://cdn.jsdelivr.net/npm/lamejs@1.2.1/lame.min.js"></script>
 
   <script>
+    // ── 다국어 번역 ───────────────────────────────────────────
+    const TRANSLATIONS = {
+      ko: {
+        title: '온라인 음악 파일 편집기',
+        tabEditor: '편집',
+        tabMerge: '합치기',
+        uploadTitle: 'MP3 파일을 여기에 끌어다 놓거나 클릭하여 선택',
+        uploadHint: 'MP3 파일만 지원합니다',
+        labelStart: '시작(초)',
+        labelEnd: '끝(초)',
+        btnApplyRange: '구간 적용',
+        regionStart: '시작:',
+        regionEnd: '끝:',
+        btnPlay: '▶ 재생',
+        btnPause: '⏸ 일시정지',
+        btnPlayRegion: '구간만 미리듣기',
+        btnExtract: '구간 추출',
+        btnDelete: '구간 삭제',
+        btnUndo: '↩ 되돌리기',
+        btnRecover: '구간 복구',
+        btnDownload: '다운로드',
+        mergeSlot0Title: '첫 번째 MP3 파일',
+        mergeSlot1Title: '두 번째 MP3 파일',
+        mergeSlotHint: '클릭하거나 끌어다 놓기',
+        btnMergeEdit: '편집 ▶',
+        btnMergeEditOpen: '편집 ▼',
+        btnMergePlay: '▶ 재생',
+        btnMergeDelete: '구간 삭제',
+        btnMergeUndo: '↩ 실행취소',
+        btnMerge: '합치기 & 다운로드',
+        footerTerms: '이용약관',
+        footerPrivacy: '개인정보처리방침',
+        footerContact: '버그 제보 및 문의: aacc9058@gmail.com',
+        footerFormats: '🎵 지원 포맷 — MP3, WAV, FLAC 등',
+        footerStorage: '🔒 파일 보관 정책 — 모든 처리는 브라우저에서 이루어지며, 파일은 서버에 저장되지 않습니다.',
+        processing: '처리 중...',
+        deletedLabel: '삭제됨',
+        errMp3Only: 'MP3 파일만 지원합니다.',
+        errReadFile: '파일을 읽을 수 없습니다: ',
+        errInputRange: '시작과 끝 시간을 모두 입력해주세요.',
+        errValidRange: (dur) => `유효한 범위를 입력해주세요. (0 ~ ${dur}초, 시작 < 끝)`,
+        errNoDeleted: '선택한 구간에 삭제된 영역이 없습니다.',
+        errDownload: '다운로드 중 오류가 발생했습니다: ',
+        errProcess: '처리 중 오류가 발생했습니다: ',
+        errMerge: '합치기 중 오류: ',
+        suffixExtract: '_추출',
+        suffixEdit: '_편집',
+        suffixMerge: '_합치기',
+        secLabel: '초',
+        deletedCount: (n) => `${n}구간 삭제됨`,
+      },
+      en: {
+        title: 'Online Audio File Editor',
+        tabEditor: 'Edit',
+        tabMerge: 'Merge',
+        uploadTitle: 'Drop an MP3 file here or click to select',
+        uploadHint: 'MP3 files only',
+        labelStart: 'Start (s)',
+        labelEnd: 'End (s)',
+        btnApplyRange: 'Apply Range',
+        regionStart: 'Start:',
+        regionEnd: 'End:',
+        btnPlay: '▶ Play',
+        btnPause: '⏸ Pause',
+        btnPlayRegion: 'Preview Region',
+        btnExtract: 'Extract',
+        btnDelete: 'Delete Region',
+        btnUndo: '↩ Undo',
+        btnRecover: 'Recover Region',
+        btnDownload: 'Download',
+        mergeSlot0Title: 'First MP3 File',
+        mergeSlot1Title: 'Second MP3 File',
+        mergeSlotHint: 'Click or drag & drop',
+        btnMergeEdit: 'Edit ▶',
+        btnMergeEditOpen: 'Edit ▼',
+        btnMergePlay: '▶ Play',
+        btnMergeDelete: 'Delete Region',
+        btnMergeUndo: '↩ Undo',
+        btnMerge: 'Merge & Download',
+        footerTerms: 'Terms of Service',
+        footerPrivacy: 'Privacy Policy',
+        footerContact: 'Bug report & contact: aacc9058@gmail.com',
+        footerFormats: '🎵 Supported formats — MP3, WAV, FLAC, etc.',
+        footerStorage: '🔒 File policy — All processing is done in your browser. No files are stored on our servers.',
+        processing: 'Processing...',
+        deletedLabel: 'Deleted',
+        errMp3Only: 'MP3 files only.',
+        errReadFile: 'Cannot read file: ',
+        errInputRange: 'Please enter both start and end times.',
+        errValidRange: (dur) => `Please enter a valid range. (0 ~ ${dur}s, start < end)`,
+        errNoDeleted: 'No deleted region found in the selected range.',
+        errDownload: 'Download error: ',
+        errProcess: 'Processing error: ',
+        errMerge: 'Merge error: ',
+        suffixExtract: '_extract',
+        suffixEdit: '_edited',
+        suffixMerge: '_merged',
+        secLabel: 's',
+        deletedCount: (n) => `${n} region${n !== 1 ? 's' : ''} deleted`,
+      },
+      ja: {
+        title: 'オンライン音楽ファイルエディター',
+        tabEditor: '編集',
+        tabMerge: '結合',
+        uploadTitle: 'MP3ファイルをここにドロップまたはクリックして選択',
+        uploadHint: 'MP3ファイルのみ対応',
+        labelStart: '開始（秒）',
+        labelEnd: '終了（秒）',
+        btnApplyRange: '範囲を適用',
+        regionStart: '開始:',
+        regionEnd: '終了:',
+        btnPlay: '▶ 再生',
+        btnPause: '⏸ 一時停止',
+        btnPlayRegion: '範囲をプレビュー',
+        btnExtract: '範囲を抽出',
+        btnDelete: '範囲を削除',
+        btnUndo: '↩ 元に戻す',
+        btnRecover: '範囲を復元',
+        btnDownload: 'ダウンロード',
+        mergeSlot0Title: '1つ目のMP3ファイル',
+        mergeSlot1Title: '2つ目のMP3ファイル',
+        mergeSlotHint: 'クリックまたはドラッグ＆ドロップ',
+        btnMergeEdit: '編集 ▶',
+        btnMergeEditOpen: '編集 ▼',
+        btnMergePlay: '▶ 再生',
+        btnMergeDelete: '範囲を削除',
+        btnMergeUndo: '↩ 元に戻す',
+        btnMerge: '結合してダウンロード',
+        footerTerms: '利用規約',
+        footerPrivacy: 'プライバシーポリシー',
+        footerContact: 'バグ報告・お問い合わせ: aacc9058@gmail.com',
+        footerFormats: '🎵 対応フォーマット — MP3、WAV、FLACなど',
+        footerStorage: '🔒 ファイルポリシー — すべての処理はブラウザ内で行われ、ファイルはサーバーに保存されません。',
+        processing: '処理中...',
+        deletedLabel: '削除済み',
+        errMp3Only: 'MP3ファイルのみ対応しています。',
+        errReadFile: 'ファイルを読み込めません: ',
+        errInputRange: '開始と終了の時間を両方入力してください。',
+        errValidRange: (dur) => `有効な範囲を入力してください。（0 〜 ${dur}秒、開始 < 終了）`,
+        errNoDeleted: '選択した範囲に削除済み領域がありません。',
+        errDownload: 'ダウンロードエラー: ',
+        errProcess: '処理エラー: ',
+        errMerge: '結合エラー: ',
+        suffixExtract: '_抽出',
+        suffixEdit: '_編集済み',
+        suffixMerge: '_結合',
+        secLabel: '秒',
+        deletedCount: (n) => `${n}区間削除済み`,
+      }
+    };
+
+    let currentLang = localStorage.getItem('sorimix-lang') || 'ko';
+
+    function t(key, ...args) {
+      const val = (TRANSLATIONS[currentLang] || TRANSLATIONS.ko)[key] ?? TRANSLATIONS.ko[key];
+      return typeof val === 'function' ? val(...args) : val;
+    }
+
+    function applyLang(lang) {
+      currentLang = lang;
+      localStorage.setItem('sorimix-lang', lang);
+      document.documentElement.lang = lang;
+      document.title = t('title');
+
+      document.querySelectorAll('[data-i18n]').forEach(el => {
+        el.textContent = t(el.dataset.i18n);
+      });
+
+      document.querySelectorAll('.lang-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.lang === lang);
+      });
+
+      // footer 동적 텍스트
+      const footerTermsEl    = document.getElementById('footer-terms');
+      const footerPrivacyEl  = document.getElementById('footer-privacy');
+      const footerContactEl  = document.getElementById('footer-contact');
+      const footerFormatsEl  = document.getElementById('footer-formats');
+      const footerStorageEl  = document.getElementById('footer-storage');
+      if (footerTermsEl)   footerTermsEl.textContent   = t('footerTerms');
+      if (footerPrivacyEl) footerPrivacyEl.textContent  = t('footerPrivacy');
+      if (footerContactEl) footerContactEl.textContent  = t('footerContact');
+      if (footerFormatsEl) footerFormatsEl.textContent  = t('footerFormats');
+      if (footerStorageEl) footerStorageEl.textContent  = t('footerStorage');
+
+      // 재생 버튼 상태 유지
+      if (wavesurfer) {
+        btnPlay.textContent = wavesurfer.isPlaying() ? t('btnPause') : t('btnPlay');
+      }
+      [0, 1].forEach(idx => {
+        const ws = mergeSlots[idx].wavesurfer;
+        const bp = document.getElementById(`btn-merge-play-${idx}`);
+        if (ws && bp) bp.textContent = ws.isPlaying() ? t('btnPause') : t('btnPlay');
+        const editBtn = document.getElementById(`btn-merge-edit-${idx}`);
+        if (editBtn) {
+          editBtn.textContent = mergeSlots[idx].isEditorOpen
+            ? t('btnMergeEditOpen') : t('btnMergeEdit');
+        }
+      });
+
+      // 삭제 상태 카운트 갱신
+      updateMergeEditStatus(0);
+      updateMergeEditStatus(1);
+    }
+
+    document.querySelectorAll('.lang-btn').forEach(btn => {
+      btn.addEventListener('click', () => applyLang(btn.dataset.lang));
+    });
+
+    // ── 메인 상태 ─────────────────────────────────────────────
     let wavesurfer = null;
     let audioBuffer = null;
     let editedBuffer = null;
@@ -431,11 +659,10 @@
     let currentRegion = null;
     let currentFileName = 'edited';
     let audioCtx = null;
-    let deletedRegions = [];      // 현재 표시된 삭제 구간 [{ start, end, id }]
-    let undoStack = [];           // undo 스택 [{ added, removed[] }]
-    let isAddingDeletedRegion = false; // region-created 이벤트 무시 플래그
+    let deletedRegions = [];
+    let undoStack = [];
+    let isAddingDeletedRegion = false;
 
-    // 합치기 상태
     const mergeSlots = [
       { audioBuffer: null, name: '', duration: 0, rawBlob: null,
         deletedRegions: [], undoStack: [], wavesurfer: null,
@@ -481,7 +708,7 @@
 
     function setLoading(btn, isLoading, originalText) {
       if (isLoading) {
-        btn.innerHTML = '<span class="spinner"></span>처리 중...';
+        btn.innerHTML = `<span class="spinner"></span>${t('processing')}`;
         btn.disabled  = true;
       } else {
         btn.innerHTML = originalText;
@@ -549,7 +776,7 @@
       region.element.classList.add('deleted-region');
       const label = document.createElement('div');
       label.className = 'deleted-region-label';
-      label.textContent = '삭제됨';
+      label.textContent = t('deletedLabel');
       region.element.appendChild(label);
     }
 
@@ -641,7 +868,7 @@
 
     function loadFile(file) {
       if (!file.type.includes('mpeg') && !file.name.toLowerCase().endsWith('.mp3')) {
-        showError('MP3 파일만 지원합니다.');
+        showError(t('errMp3Only'));
         return;
       }
       clearError();
@@ -687,9 +914,9 @@
             ]
           });
 
-          wavesurfer.on('play',   () => { btnPlay.textContent = '⏸ 일시정지'; });
-          wavesurfer.on('pause',  () => { btnPlay.textContent = '▶ 재생'; });
-          wavesurfer.on('finish', () => { btnPlay.textContent = '▶ 재생'; });
+          wavesurfer.on('play',   () => { btnPlay.textContent = t('btnPause'); });
+          wavesurfer.on('pause',  () => { btnPlay.textContent = t('btnPlay'); });
+          wavesurfer.on('finish', () => { btnPlay.textContent = t('btnPlay'); });
 
           wavesurfer.on('region-created', handleRegion);
           wavesurfer.on('region-updated', handleRegion);
@@ -701,7 +928,7 @@
           wavesurfer.on('error', () => URL.revokeObjectURL(blobUrl));
 
         } catch (err) {
-          showError('파일을 읽을 수 없습니다: ' + err.message);
+          showError(t('errReadFile') + err.message);
           editor.style.display     = 'none';
           uploadArea.style.display = 'block';
         }
@@ -709,7 +936,6 @@
       reader.readAsArrayBuffer(file);
     }
 
-    // 구간 선택 시 입력 필드 동기화
     function syncInputsFromRegion(region) {
       inputStart.value = region.start.toFixed(1);
       inputEnd.value   = region.end.toFixed(1);
@@ -717,7 +943,6 @@
 
     function handleRegion(region) {
       if (isAddingDeletedRegion) return;
-      // 삭제 표시된 구간은 건드리지 않고, 이전 선택 구간만 제거
       const deletedIds = new Set(deletedRegions.map(d => d.id));
       Object.values(wavesurfer.regions.list).forEach(r => {
         if (r.id !== region.id && !deletedIds.has(r.id)) r.remove();
@@ -730,11 +955,9 @@
     }
 
     uploadArea.addEventListener('click', () => fileInput.click());
-
     fileInput.addEventListener('change', (e) => {
       if (e.target.files[0]) loadFile(e.target.files[0]);
     });
-
     uploadArea.addEventListener('dragover', (e) => {
       e.preventDefault();
       uploadArea.classList.add('drag-over');
@@ -753,16 +976,15 @@
       const e = parseFloat(inputEnd.value);
 
       if (isNaN(s) || isNaN(e)) {
-        showError('시작과 끝 시간을 모두 입력해주세요.');
+        showError(t('errInputRange'));
         return;
       }
       if (s < 0 || e > duration || s >= e) {
-        showError(`유효한 범위를 입력해주세요. (0 ~ ${duration.toFixed(1)}초, 시작 < 끝)`);
+        showError(t('errValidRange', duration.toFixed(1)));
         return;
       }
       clearError();
 
-      // 삭제 구간은 유지하고 현재 선택 구간만 교체
       const deletedIds = new Set(deletedRegions.map(d => d.id));
       Object.values(wavesurfer.regions.list).forEach(r => {
         if (!deletedIds.has(r.id)) r.remove();
@@ -784,14 +1006,14 @@
       setTimeout(() => {
         try {
           editedBuffer = sliceBuffer(audioBuffer, currentRegion.start, currentRegion.end);
-          editedSuffix = '_추출';
+          editedSuffix = t('suffixExtract');
           btnDownload.disabled = false;
         } catch (err) {
-          showError('처리 중 오류가 발생했습니다: ' + err.message);
+          showError(t('errProcess') + err.message);
         } finally {
-          btnExtract.innerHTML = '구간 추출';
-          btnExtract.disabled  = currentRegion === null;
-          btnDelete.disabled   = currentRegion === null;
+          btnExtract.textContent = t('btnExtract');
+          btnExtract.disabled    = currentRegion === null;
+          btnDelete.disabled     = currentRegion === null;
         }
       }, 50);
     });
@@ -802,10 +1024,8 @@
       const newStart = currentRegion.start;
       const newEnd   = currentRegion.end;
 
-      // 겹치는 기존 삭제 구간 수집
       const overlapping = deletedRegions.filter(d => d.start < newEnd && d.end > newStart);
 
-      // 머지된 범위 계산
       let mergedStart = newStart;
       let mergedEnd   = newEnd;
       for (const d of overlapping) {
@@ -813,7 +1033,6 @@
         mergedEnd   = Math.max(mergedEnd,   d.end);
       }
 
-      // 겹치는 기존 오버레이 제거
       const overlappingIds = new Set(overlapping.map(d => d.id));
       for (const d of overlapping) {
         const r = wavesurfer.regions.list[d.id];
@@ -821,7 +1040,6 @@
       }
       deletedRegions = deletedRegions.filter(d => !overlappingIds.has(d.id));
 
-      // 현재 선택 구간 제거 후 머지된 오버레이 추가
       currentRegion.remove();
       const mergedRegion = addDeletedRegionOverlay(mergedStart, mergedEnd);
       const added = { start: mergedStart, end: mergedEnd, id: mergedRegion.id };
@@ -836,7 +1054,7 @@
       setButtonsEnabled(false);
       btnUndo.disabled     = false;
       btnDownload.disabled = false;
-      editedSuffix = '_편집';
+      editedSuffix = t('suffixEdit');
     });
 
     btnRecover.addEventListener('click', () => {
@@ -844,7 +1062,7 @@
 
       const recovered = applyRecovery(currentRegion.start, currentRegion.end);
       if (!recovered) {
-        showError('선택한 구간에 삭제된 영역이 없습니다.');
+        showError(t('errNoDeleted'));
         return;
       }
 
@@ -863,14 +1081,12 @@
       if (undoStack.length === 0) return;
       const { added, removed } = undoStack.pop();
 
-      // added 배열의 오버레이 모두 제거
       for (const a of added) {
         const r = wavesurfer.regions.list[a.id];
         if (r) r.remove();
         deletedRegions = deletedRegions.filter(d => d.id !== a.id);
       }
 
-      // removed 구간 복원 + undoStack 내 구 ID 갱신
       for (const seg of removed) {
         const restored = addDeletedRegionOverlay(seg.start, seg.end);
         deletedRegions.push({ start: seg.start, end: seg.end, id: restored.id });
@@ -897,7 +1113,7 @@
           let outputBuffer, suffix;
           if (deletedRegions.length > 0) {
             outputBuffer = applyAllDeletions(audioBuffer, deletedRegions);
-            suffix = '_편집';
+            suffix = t('suffixEdit');
           } else {
             outputBuffer = editedBuffer;
             suffix = editedSuffix;
@@ -905,15 +1121,15 @@
           const mp3 = audioBufferToMp3(outputBuffer);
           downloadBlob(mp3, currentFileName + suffix + '.mp3');
         } catch (err) {
-          showError('다운로드 중 오류가 발생했습니다: ' + err.message);
+          showError(t('errDownload') + err.message);
         } finally {
-          btnDownload.innerHTML = '다운로드';
-          btnDownload.disabled  = deletedRegions.length === 0 && !editedBuffer;
+          btnDownload.textContent = t('btnDownload');
+          btnDownload.disabled    = deletedRegions.length === 0 && !editedBuffer;
         }
       }, 50);
     });
 
-    // ── 파형 터치 드래그 구간 선택 ───────────────────────────
+    // ── 파형 터치 드래그 ─────────────────────────────────────
     {
       const waveformEl = document.getElementById('waveform');
       let touchRegionStart = null;
@@ -1027,8 +1243,9 @@
     }
 
     function updateMergeEditStatus(idx) {
-      const count = mergeSlots[idx].deletedRegions.length;
-      document.getElementById(`merge-edit-status-${idx}`).textContent = count > 0 ? `${count}구간 삭제됨` : '';
+      const count = mergeSlots[idx] ? mergeSlots[idx].deletedRegions.length : 0;
+      const el = document.getElementById(`merge-edit-status-${idx}`);
+      if (el) el.textContent = count > 0 ? t('deletedCount', count) : '';
     }
 
     function attachMergeTouchDrag(idx) {
@@ -1100,10 +1317,10 @@
         plugins: [ WaveSurfer.regions.create({ dragSelection: { slop: 5 }, regions: [] }) ]
       });
       slot.wavesurfer = ws;
-      const btnPlay = document.getElementById(`btn-merge-play-${idx}`);
-      ws.on('play',   () => { btnPlay.textContent = '⏸ 일시정지'; });
-      ws.on('pause',  () => { btnPlay.textContent = '▶ 재생'; });
-      ws.on('finish', () => { btnPlay.textContent = '▶ 재생'; });
+      const bp = document.getElementById(`btn-merge-play-${idx}`);
+      ws.on('play',   () => { bp.textContent = t('btnPause'); });
+      ws.on('pause',  () => { bp.textContent = t('btnPlay'); });
+      ws.on('finish', () => { bp.textContent = t('btnPlay'); });
       ws.on('region-created', (r) => handleMergeRegion(idx, r));
       ws.on('region-updated', (r) => handleMergeRegion(idx, r));
       const url = URL.createObjectURL(slot.rawBlob);
@@ -1120,7 +1337,7 @@
       slot.isEditorOpen = !slot.isEditorOpen;
       panel.classList.toggle('open', slot.isEditorOpen);
       btn.classList.toggle('open', slot.isEditorOpen);
-      btn.textContent = slot.isEditorOpen ? '편집 ▼' : '편집 ▶';
+      btn.textContent = slot.isEditorOpen ? t('btnMergeEditOpen') : t('btnMergeEdit');
       if (slot.isEditorOpen && !slot.wavesurfer) initMergeWavesurfer(idx);
     }
 
@@ -1161,7 +1378,7 @@
         const restored = addMergeDeletedOverlay(idx, seg.start, seg.end);
         slot.deletedRegions.push({ start: seg.start, end: seg.end, id: restored.id });
         for (const entry of slot.undoStack) {
-          for (const a of entry.added)   { if (a.id  === seg.id) a.id  = restored.id; }
+          for (const a of entry.added)    { if (a.id  === seg.id) a.id  = restored.id; }
           for (const rm of entry.removed) { if (rm.id === seg.id) rm.id = restored.id; }
         }
       }
@@ -1176,7 +1393,7 @@
       slot.isEditorOpen = false; slot.currentRegion = null;
       document.getElementById(`merge-editor-${idx}`).classList.remove('open');
       const editBtn = document.getElementById(`btn-merge-edit-${idx}`);
-      editBtn.classList.remove('open'); editBtn.textContent = '편집 ▶';
+      editBtn.classList.remove('open'); editBtn.textContent = t('btnMergeEdit');
       document.getElementById(`merge-edit-status-${idx}`).textContent = '';
       document.getElementById(`btn-merge-delete-${idx}`).disabled = true;
       document.getElementById(`btn-merge-undo-${idx}`).disabled   = true;
@@ -1205,7 +1422,7 @@
         const info = slot.querySelector('.merge-slot-info');
         info.style.display = 'flex';
         info.querySelector('.merge-slot-name').textContent = data.name;
-        info.querySelector('.merge-slot-duration').textContent = data.duration.toFixed(1) + '초';
+        info.querySelector('.merge-slot-duration').textContent = data.duration.toFixed(1) + t('secLabel');
       } else {
         slot.classList.remove('loaded');
         slot.querySelector('.merge-slot-placeholder').style.display = 'block';
@@ -1224,13 +1441,13 @@
         li.dataset.idx = idx;
         li.querySelector('.merge-order-num').textContent = i + 1;
         li.querySelector('.merge-order-name').textContent = mergeSlots[idx].name;
-        li.querySelector('.merge-order-dur').textContent = mergeSlots[idx].duration.toFixed(1) + '초';
+        li.querySelector('.merge-order-dur').textContent = mergeSlots[idx].duration.toFixed(1) + t('secLabel');
       });
     }
 
     function loadMergeFile(idx, file) {
       if (!file.type.includes('mpeg') && !file.name.toLowerCase().endsWith('.mp3')) {
-        document.getElementById('merge-error-msg').textContent = 'MP3 파일만 지원합니다.';
+        document.getElementById('merge-error-msg').textContent = t('errMp3Only');
         return;
       }
       document.getElementById('merge-error-msg').textContent = '';
@@ -1249,13 +1466,12 @@
           updateMergeSlotUI(idx);
           updateMergeOrderList();
         } catch (err) {
-          document.getElementById('merge-error-msg').textContent = '파일을 읽을 수 없습니다: ' + err.message;
+          document.getElementById('merge-error-msg').textContent = t('errReadFile') + err.message;
         }
       };
       reader.readAsArrayBuffer(file);
     }
 
-    // 슬롯 이벤트 연결
     [0, 1].forEach(idx => {
       const slot  = document.getElementById(`merge-slot-${idx}`);
       const input = document.getElementById(`merge-input-${idx}`);
@@ -1338,7 +1554,6 @@
       mergeDragSrc = null;
     });
 
-    // 합치기 & 다운로드
     document.getElementById('btn-merge').addEventListener('click', () => {
       const [idxA, idxB] = mergeOrder;
       if (!mergeSlots[idxA].audioBuffer || !mergeSlots[idxB].audioBuffer) return;
@@ -1354,30 +1569,33 @@
             : mergeSlots[idxB].audioBuffer;
           const merged = mergeBuffers(editedA, editedB);
           const mp3    = audioBufferToMp3(merged);
-          downloadBlob(mp3, `${mergeSlots[idxA].name}_${mergeSlots[idxB].name}_합치기.mp3`);
+          downloadBlob(mp3, `${mergeSlots[idxA].name}_${mergeSlots[idxB].name}${t('suffixMerge')}.mp3`);
         } catch (err) {
-          document.getElementById('merge-error-msg').textContent = '합치기 중 오류: ' + err.message;
+          document.getElementById('merge-error-msg').textContent = t('errMerge') + err.message;
         } finally {
-          btn.innerHTML = '합치기 & 다운로드';
-          btn.disabled  = false;
+          btn.textContent = t('btnMerge');
+          btn.disabled    = false;
         }
       }, 50);
     });
+
+    // ── 초기 언어 적용 ────────────────────────────────────────
+    applyLang(currentLang);
   </script>
 
   <footer>
     <div class="footer-links">
       <span>© 2026 SoriMix</span>
       <span>|</span>
-      <a href="terms.html">이용약관</a>
+      <a href="terms.html" id="footer-terms">이용약관</a>
       <span>|</span>
-      <a href="privacy.html">개인정보처리방침</a>
+      <a href="privacy.html" id="footer-privacy">개인정보처리방침</a>
       <span>|</span>
-      <a href="mailto:aacc9058@gmail.com">버그 제보 및 문의: aacc9058@gmail.com</a>
+      <a href="mailto:aacc9058@gmail.com" id="footer-contact">버그 제보 및 문의: aacc9058@gmail.com</a>
     </div>
     <div class="footer-info">
-      <span>🎵 지원 포맷 — MP3, WAV, FLAC 등</span>
-      <span>🔒 파일 보관 정책 — 모든 처리는 브라우저에서 이루어지며, 파일은 서버에 저장되지 않습니다.</span>
+      <span id="footer-formats">🎵 지원 포맷 — MP3, WAV, FLAC 등</span>
+      <span id="footer-storage">🔒 파일 보관 정책 — 모든 처리는 브라우저에서 이루어지며, 파일은 서버에 저장되지 않습니다.</span>
     </div>
   </footer>
 </body>
