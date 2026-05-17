@@ -255,6 +255,35 @@
       pointer-events: none;
       white-space: nowrap;
     }
+
+    footer {
+      width: 100%;
+      max-width: 700px;
+      margin-top: 48px;
+      padding: 24px 0 16px;
+      border-top: 1px solid #2d2d4e;
+      color: #666;
+      font-size: 0.8rem;
+      line-height: 1.8;
+    }
+    footer .footer-links {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px 14px;
+      margin-bottom: 12px;
+      align-items: center;
+    }
+    footer .footer-links a {
+      color: #888;
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+    footer .footer-links a:hover { color: #7c6af7; }
+    footer .footer-info { display: flex; flex-direction: column; gap: 4px; }
+    footer .footer-info span { color: #555; }
+    @media (max-width: 600px) {
+      footer { font-size: 0.75rem; }
+    }
   </style>
 </head>
 <body>
@@ -1335,5 +1364,21 @@
       }, 50);
     });
   </script>
+
+  <footer>
+    <div class="footer-links">
+      <span>© 2026 SoriMix</span>
+      <span>|</span>
+      <a href="terms.html">이용약관</a>
+      <span>|</span>
+      <a href="privacy.html">개인정보처리방침</a>
+      <span>|</span>
+      <a href="mailto:aacc9058@gmail.com">버그 제보 및 문의: aacc9058@gmail.com</a>
+    </div>
+    <div class="footer-info">
+      <span>🎵 지원 포맷 — MP3, WAV, FLAC 등</span>
+      <span>🔒 파일 보관 정책 — 모든 처리는 브라우저에서 이루어지며, 파일은 서버에 저장되지 않습니다.</span>
+    </div>
+  </footer>
 </body>
 </html>
